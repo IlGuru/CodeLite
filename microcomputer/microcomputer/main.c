@@ -85,13 +85,13 @@ void* Programma() {
 	*/
 	
 	//	Test LD r, (HL)	
+	/*
 	//		Metto 0x44 in (0x0105), metto 0x01 in H, 0x05 in L così (HL) = (0x0105), poi eseguo LD A, (HL) ed alla fine in A ci sarà 0x44
 	//	LD H, N		N -> H
 	*devMProc->Reg->HL		= 0x0105;
 	devMemory->memory[ 0x0105 ] = 0x44;						
 	//	LD A, (HL)	(HL) -> A
 	devMemory->memory[ 0 ] = OP_CODE_R(OP_EM_LD_R_HL,REG_A);	
-	/*
 	*/
 	
 	//	Test LD r, (IX+d) : r=A, d=4, IX=1 => (IX+d)=(0x05)=0xBB => A=0xBB
@@ -248,10 +248,10 @@ void* Programma() {
 	*/
 
 	//	LD dd, nn
-	/*
 	devMemory->memory[ 0 ] 	= 0b00110001;
 	devMemory->memory[ 1 ] 	= 0x50;
 	devMemory->memory[ 2 ] 	= 0x00;
+	/*
 	*/
 
 	//	LD IX, nn

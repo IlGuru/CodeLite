@@ -53,17 +53,6 @@
 
 //-----------------------------
 
-typedef unsigned char t_flag_bit;
-
-#define FLAG_REG_C		0
-#define FLAG_REG_N		1
-#define FLAG_REG_PV		2
-#define FLAG_REG_H		4
-#define FLAG_REG_Z		6
-#define FLAG_REG_S		7
-
-//-----------------------------
-
 struct s_MProc {
 
 	//	DEVICE

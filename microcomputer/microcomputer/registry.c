@@ -57,3 +57,12 @@ void * _reset_registry( p_Register Reg ) {
 	return NULL;
 }
 
+void * _set_flag( p_Register Reg, t_flag_bit flag ) {
+	SETBIT( *Reg->F, flag );
+	return NULL;
+}
+
+void * _reset_flag( p_Register Reg, t_flag_bit flag ) {
+	CLRBIT( *Reg->F, flag );
+	return NULL;
+}

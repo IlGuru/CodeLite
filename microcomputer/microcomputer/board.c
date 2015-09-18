@@ -3,9 +3,39 @@
 //-------------------------
 //	STATI
 
+void *slist_flags( p_slist pLAtt ) {
+	
+	p_slist pLPrev	= NULL;
+	
+	if ( pLAtt != NULL ) {
+		
+		pLAtt->flag = 0;
+		
+		if ( pLAtt->valore == STATO_VAL_MIN )
+			SETBIT( pLAtt->flag , STATO_FLAG_LOW );
+		if ( pLAtt->valore == STATO_VAL_MAX )
+			SETBIT( pLAtt->flag , STATO_FLAG_HIGH );
+
+		if ( pLAtt->s_prev != NULL ) {
+			pLPrev = pLAtt->s_prev;
+			if ( pLPrev->valore  < pLAtt->valore )
+				SETBIT( pLAtt->flag , STATO_FLAG_RAISE );
+			if ( pLPrev->valore == pLAtt->valore )
+				SETBIT( pLAtt->flag , STATO_FLAG_EQUAL );
+			if ( pLPrev->valore  > pLAtt->valore )
+				SETBIT( pLAtt->flag , STATO_FLAG_FALL );
+		}
+		
+	}
+	
+	return NULL;
+}
+
 void *slist_set( p_slist pSlist, tValStato valore ) {			//	Scrive il valore dello stato nel nodo dalla lista
 	pSlist->valore = valore;
 
+	slist_flags( pSlist );
+	
 	return NULL;
 }
 
@@ -28,19 +58,24 @@ void *slist_add( p_slist *pListaStati ) {						//	Aggiunge un nuovo stato e ne a
 	p_slist pSlist;
 	pSlist = malloc( sizeof(t_slist) );
 
+	pSlist->flag 		= 0;
+	pSlist->s_next		= NULL;
 	if ( *pListaStati == NULL ) {
-		slist_set( pSlist, '\0' );
-		pSlist->hist_pos	= 0;
-		pSlist->s_prev	= NULL;
-		pSlist->s_next	= NULL;
+		pSlist->hist_pos		= STATO_ENTRIES_MIN;
+		pSlist->s_prev			= NULL;
+		slist_set( pSlist, STATO_VAL_MIN );
 	} else {
 		pSlist->s_prev = *pListaStati;
-		slist_set( pSlist, pSlist->s_prev->valore );
-		pSlist->hist_pos		= pSlist->s_prev->hist_pos + 1;
-		pSlist->s_next			= NULL;
-		if ( pSlist->s_prev != NULL )
+		if ( pSlist->s_prev != NULL ) {
 			pSlist->s_prev->s_next	= pSlist;
+			pSlist->hist_pos		= pSlist->s_prev->hist_pos + 1;
+			slist_set( pSlist, pSlist->s_prev->valore );
+		} else {
+			pSlist->hist_pos		= STATO_ENTRIES_MIN;
+			slist_set( pSlist, STATO_VAL_MIN );
+		}
 	}
+
 	*pListaStati = pSlist;
 
 	return NULL;
@@ -50,10 +85,10 @@ p_stato stato_new() {											//	Crea un nuovo stato
 	p_stato pStato;
 	pStato = malloc( sizeof(t_stato) );
 
-	pStato->att		= NULL;
+	pStato->att			= NULL;
 	slist_add( &pStato->att );									//	Puntatore al nodo attuale della lista e creazione del primo nodo
-	pStato->oldest	= pStato->att;								//	Puntatore all'ultimo nodo della lista
-	pStato->entries= 1;											//	Numero di nodi
+	pStato->oldest		= pStato->att;							//	Puntatore all'ultimo nodo della lista
+	pStato->entries		= 1;									//	Numero di nodi
 
 	return pStato;
 }
@@ -141,7 +176,8 @@ void *wlist_node_accoda( p_wlist *wList, p_wire pWire ) {
 }
 
 void *wire_set_value( p_wire pWire, tValStato valore ) {		//	Scrive il valore nello stato attuale di wire
-	pWire->stato->att->valore = valore;
+	//pWire->stato->att->valore = valore;
+	slist_set( pWire->stato->att, valore );
 	
 	return NULL;
 }
@@ -201,8 +237,8 @@ p_wire wire_get( char *nome, p_wlist pWlist ) {					//	Cerca un wire da una list
 	return NULL;
 }
 
-	//-------------------------
-	//	Sincronizzazione wires
+//-------------------------
+//	Sincronizzazione wires
 
 void *all_wires_add_tick() {										//	Aggiunge uno stato copiandolo dal presendente su ogni wire mantenendoli sincronizzati
 	p_wlist pWlist;
@@ -214,7 +250,7 @@ void *all_wires_add_tick() {										//	Aggiunge uno stato copiandolo dal prese
 		pWire	= pWlist->Wire;
 		wire_add_stato( pWire );
 
-		if ( pWire->stato->entries > STATO_MAX_HIST )
+		if ( pWire->stato->entries > STATO_ENTRIES_MAX )
 			stato_del_last( pWire->stato );
 
 		pWlist = pWlist->w_next;

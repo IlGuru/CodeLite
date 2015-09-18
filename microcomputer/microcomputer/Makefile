@@ -18,7 +18,7 @@ window.o : window.h window.c
 #bus.o : bus.c bus.h window.h bit_oper.h
 #	$(CC) -c bus.c
 
-board.o : board.h board.c
+board.o : board.h board.c bit_oper.h
 	$(CC) -c board.h board.c $(CFLAGS)
 
 dev_clock.o : dev_clock.h dev_clock.c board.h board.c

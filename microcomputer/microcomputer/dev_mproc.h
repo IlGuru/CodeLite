@@ -47,11 +47,33 @@
 #define	MP_Data_06     38
 #define	MP_Data_07     39
 
+#define MP_MAIN_REG_SET	0
+#define MP_ALTE_REG_SET	1
+
 struct s_MProc {
 
+	//	GATES
 	p_gate	mp_gate[MP_NUM_PIN];
 	p_wire	mp_wire[MP_NUM_PIN];
 	p_glist	pGates;
+
+	//	REGISTRI //	MP_MAIN_REG_SET, MP_ALT_REG_SET
+	char		reg_A[2];		//	ACCUMULATORE
+	char		reg_F[2];		//	FLAGS
+	char		reg_B[2];	
+	char		reg_C[2];
+	char		reg_D[2];
+	char		reg_E[2];
+	char		reg_H[2];
+	char		reg_L[2];
+	char		reg_I;			//	INTERRUPT PAGE ADDRESS REGISTER
+	char		reg_R;			//	MEMORY REFRESH REGISTER
+	short int	reg_IX;			//	INDEX REGISTER
+	short int	reg_IY;			//	INDEX REGISTER
+	short int	reg_SP;			//	STACK POINTER
+	short int	reg_PC;			//	PROGRAM COUNTER
+	
+	char		stato;
 	
 	//	Callback
 	FN_VOID_VOID	task;

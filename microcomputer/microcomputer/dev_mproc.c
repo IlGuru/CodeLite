@@ -3,32 +3,87 @@
 //---------------------------------
 
 void *MProcTask() {
-
-	if ( devMProc->mp_gate[ MP__CLOCK     ]->Wire->stato->entries > 1) {
-		if ( ( devMProc->mp_gate[ MP__CLOCK     ]->Wire->stato->att->valore == 1 ) && ( devMProc->mp_gate[ MP__CLOCK     ]->Wire->stato->att->s_prev->valore == 0 ) ) {
-			if ( gate_get_val( devMProc->mp_gate[ MP_Data_00    ] ) == 1 ) {
-				gate_set_val( devMProc->mp_gate[ MP_Data_00    ], 0 );
+/*
+	p_slist pStato = NULL;
+	p_gate pClock, pData00, pData01;
+	
+	pClock  = devMProc->mp_gate[ MP__CLOCK ];
+	pData00 = devMProc->mp_gate[ MP_Data_00 ];
+	pData01 = devMProc->mp_gate[ MP_Data_01 ];
+	pStato = pClock->Wire->stato->att;	
+	if ( TSTBIT( pStato->flag , STATO_FLAG_RAISE ) ) {
+		if ( gate_get_val( pData00 ) == STATO_VAL_MAX ) {
+			gate_set_val( pData00, STATO_VAL_MIN );
+		} else {
+			gate_set_val( pData00, STATO_VAL_MAX );
+		}
+		
+		pStato = pData00->Wire->stato->att;		
+		if ( TSTBIT( pStato->flag , STATO_FLAG_RAISE ) ) {
+			if ( gate_get_val( pData01 ) == STATO_VAL_MAX ) {
+				gate_set_val( pData01, STATO_VAL_MIN );
 			} else {
-				gate_set_val( devMProc->mp_gate[ MP_Data_00    ], 1 );
-			}
-			if ( ( devMProc->mp_gate[ MP_Data_00    ]->Wire->stato->att->valore == 1 ) && ( devMProc->mp_gate[ MP_Data_00    ]->Wire->stato->att->s_prev->valore == 0 ) ) {
-				if ( gate_get_val( devMProc->mp_gate[ MP_Data_01    ] ) == 1 ) {
-					gate_set_val( devMProc->mp_gate[ MP_Data_01    ], 0 );
-				} else {
-					gate_set_val( devMProc->mp_gate[ MP_Data_01    ], 1 );
-				}
+				gate_set_val( pData01, STATO_VAL_MAX );
 			}
 		}
 	}
+*/
+	p_gate pReset	= NULL;
+	p_gate pClock	= NULL;
+	p_slist pStato	= NULL;
 
+	//MP__RESET
+	pReset  = devMProc->mp_gate[ MP__RESET ];	
+	pStato = pClock->Wire->stato->att;	
+	if ( TSTBIT( pStato->flag , STATO_FLAG_FALL ) ) {	//	Reset request
+	
+		return NULL;
+		
+	}
+	
+	//MP__CLOCK
+	pClock  = devMProc->mp_gate[ MP__CLOCK ];	
+	pStato = pClock->Wire->stato->att;	
+	if ( TSTBIT( pStato->flag , STATO_FLAG_FALL ) ) {	//	Clock down
+	
+		return NULL;
+		
+	}
+	
 	return NULL;
 }
 
 void *MProcInit() {
-	char i;
-
+	p_glist pGlist;
+	char 	i;
+	
 	devMProc = malloc( sizeof(t_MProc) );
 
+	devMProc->reg_A[ MP_MAIN_REG_SET ] = 0;
+	devMProc->reg_A[ MP_ALTE_REG_SET ] = 0;
+	devMProc->reg_F[ MP_MAIN_REG_SET ] = 0;
+	devMProc->reg_F[ MP_ALTE_REG_SET ] = 0;
+	devMProc->reg_B[ MP_MAIN_REG_SET ] = 0;
+	devMProc->reg_B[ MP_ALTE_REG_SET ] = 0;
+	devMProc->reg_C[ MP_MAIN_REG_SET ] = 0;
+	devMProc->reg_C[ MP_ALTE_REG_SET ] = 0;
+	devMProc->reg_D[ MP_MAIN_REG_SET ] = 0;
+	devMProc->reg_D[ MP_ALTE_REG_SET ] = 0;
+	devMProc->reg_E[ MP_MAIN_REG_SET ] = 0;
+	devMProc->reg_E[ MP_ALTE_REG_SET ] = 0;
+	devMProc->reg_H[ MP_MAIN_REG_SET ] = 0;
+	devMProc->reg_H[ MP_ALTE_REG_SET ] = 0;
+	devMProc->reg_L[ MP_MAIN_REG_SET ] = 0;
+	devMProc->reg_L[ MP_ALTE_REG_SET ] = 0;
+	devMProc->reg_I                    = 0;
+	devMProc->reg_R                    = 0;
+	devMProc->reg_IX                   = 0;
+	devMProc->reg_IY                   = 0;
+	devMProc->reg_SP                   = 0;
+	devMProc->reg_PC                   = 0;
+
+	//	GATES E WIRES
+	
 	devMProc->pGates = NULL;
 	
 	devMProc->mp_wire[ MP__M1        ] = wire_new( "_M1", 		1 );
@@ -69,9 +124,9 @@ void *MProcInit() {
 	devMProc->mp_wire[ MP_Data_06    ] = wire_new( "D6", 		0 );
 	devMProc->mp_wire[ MP_Data_07    ] = wire_new( "D7", 		0 );
 
-	devMProc->mp_gate[ MP__CLOCK     ] = gate_new( "_CLOCK", 	GATEMODE_INPUT,	  6, NULL                               );
-	devMProc->mp_gate[ MP_VCC        ] = gate_new( "VCC", 		GATEMODE_INPUT,	 11, NULL                               );
-	devMProc->mp_gate[ MP_GND        ] = gate_new( "GND", 		GATEMODE_INPUT,  29, NULL                               );
+	devMProc->mp_gate[ MP__CLOCK     ] = gate_new( "_CLOCK", 	GATEMODE_INPUT,	  6, NULL                               );	// Wires esterni
+	devMProc->mp_gate[ MP_VCC        ] = gate_new( "VCC", 		GATEMODE_INPUT,	 11, NULL                               );	// Wires esterni
+	devMProc->mp_gate[ MP_GND        ] = gate_new( "GND", 		GATEMODE_INPUT,  29, NULL                               );	// Wires esterni
 	devMProc->mp_gate[ MP__M1        ] = gate_new( "_M1", 		GATEMODE_OUTPUT, 17, devMProc->mp_wire[ MP__M1        ] );
 	devMProc->mp_gate[ MP__MREQ      ] = gate_new( "_MREQ", 	GATEMODE_OUTPUT, 19, devMProc->mp_wire[ MP__MREQ      ] );
 	devMProc->mp_gate[ MP__IORQ      ] = gate_new( "_IORQ", 	GATEMODE_OUTPUT, 20, devMProc->mp_wire[ MP__IORQ      ] );
@@ -110,8 +165,6 @@ void *MProcInit() {
 	devMProc->mp_gate[ MP_Data_06    ] = gate_new( "D6", 		GATEMODE_INPUT,	 10, devMProc->mp_wire[ MP_Data_06    ] );
 	devMProc->mp_gate[ MP_Data_07    ] = gate_new( "D7", 		GATEMODE_INPUT,	 13, devMProc->mp_wire[ MP_Data_07    ] );
 
-	p_glist pGlist;
-	
 	for ( i=0; i<MP_NUM_PIN; i++) {
 		if ( devMProc->pGates == NULL ) {								// Inizializza p_all_gates
 			glist_node_accoda( &devMProc->pGates, devMProc->mp_gate[i] );

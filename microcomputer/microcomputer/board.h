@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bit_oper.h"
+
 //-------------------------
 
 typedef struct s_slist 	t_slist;
@@ -32,7 +34,17 @@ typedef struct s_gate* 	p_gate;
 // -----------
 //	STATI
 
-#define STATO_MAX_HIST	32
+#define STATO_ENTRIES_MIN	0
+#define STATO_ENTRIES_MAX	32
+
+#define STATO_VAL_MAX		1
+#define STATO_VAL_MIN		0
+
+#define STATO_FLAG_LOW   	0
+#define STATO_FLAG_HIGH  	1
+#define STATO_FLAG_RAISE 	2
+#define STATO_FLAG_EQUAL 	3
+#define STATO_FLAG_FALL  	4
 
 typedef char 		tValStato;
 typedef short int 	tDimHistory;
@@ -45,6 +57,7 @@ struct s_stato {
 
 struct s_slist {
 	tValStato		valore;
+	tValStato		flag;
 	tDimHistory		hist_pos;
 	p_slist			s_prev;
 	p_slist			s_next;

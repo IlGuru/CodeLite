@@ -36,7 +36,7 @@ board.o : board.h board.c bit_oper.h
 op_codes.o : op_codes.h op_codes.c
 	$(CC) -c op_codes.h op_codes.c $(CFLAGS)
 
-registry.o : registry.h registry.c bit_oper.h
+registry.o : registry.h registry.c
 	$(CC) -c registry.h registry.c $(CFLAGS)
 
 .PHONY: clean

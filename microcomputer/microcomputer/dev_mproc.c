@@ -65,6 +65,14 @@ static void * _refresh_address() {
 	return NULL;
 }
 
+static void * _set_flag( t_flag_bit flag ) {
+	SETBIT( *devMProc->Reg->F, flag );
+	return NULL;
+}
+static void * _reset_flag( t_flag_bit flag ) {
+	CLRBIT( *devMProc->Reg->F, flag );
+	return NULL;
+}
 //----------------------------------------------------------------------------------------------
 
 static void * _check_reset() {
@@ -455,20 +463,6 @@ void * _cycle_reg16_copy( t_mcycle m_att, t_mcycle m_next, p_reg16 r_source, p_r
 
 	return NULL;
 }
-void * _cycle_reg16_set( t_mcycle m_att, t_mcycle m_next, p_reg16 r_dest, dt_16bit val ) {
-
-	if ( devMProc->Cycle->m == m_att ) {
-
-		*r_dest 	= val;
-
-		devMProc->Cycle->t	= T_CYCLE_START;
-		devMProc->Cycle->m 	= m_next;
-
-		return NULL;
-	}
-
-	return NULL;
-}
 void * _cycle_pc_reg_memread( t_mcycle m_att, t_mcycle m_next, p_reg r_reg ) {
 	if ( devMProc->Cycle->m == m_att ) {
 
@@ -765,20 +759,107 @@ FN_OP_CODE _op_ld_de_a() {
 
 FN_OP_CODE _op_ld_a_nn() {
 
-	_cycle_change( M_CYCLE_M1, M_CYCLE_NEXT );
-	_cycle_pc_reg_memread( M_CYCLE_M2, M_CYCLE_NEXT, devMProc->Op->OperL );
-	_cycle_pc_reg_memread( M_CYCLE_M3, M_CYCLE_NEXT, devMProc->Op->OperH );
-	_cycle_addr_reg_memread( M_CYCLE_M4, M_CYCLE_END, *devMProc->Op->Operands, devMProc->Reg->A );
+	if ( devMProc->Cycle->m == M_CYCLE_M1 ) {
+		devMProc->Op->pR		= devMProc->Reg->A;
+		
+		devMProc->Cycle->t			= T_CYCLE_START;
+		devMProc->Cycle->m 			= M_CYCLE_NEXT;
+		
+		return NULL;
+	}
+	if ( devMProc->Cycle->m == M_CYCLE_M2 ) {
+		
+		_mem_read( *devMProc->Reg->PC, devMProc->Op->OperL );
+		
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			(*devMProc->Reg->PC)++;
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_NEXT;
+		}
 
-	return NULL;		
+		return NULL;
+	}	
+	if ( devMProc->Cycle->m == M_CYCLE_M3 ) {
+		
+		_mem_read( *devMProc->Reg->PC, devMProc->Op->OperH );
+		
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			(*devMProc->Reg->PC)++;
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}	
+	if ( devMProc->Cycle->m == M_CYCLE_M4 ) {
+		
+		devMProc->Op->dt16bit	= *devMProc->Op->Operands;
+
+		_mem_read( devMProc->Op->dt16bit, devMProc->Op->pR );
+		
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_END;
+		}
+
+		return NULL;
+	}	
+
+	devMProc->Cycle->t		= T_CYCLE_START;
+	devMProc->Cycle->m 		= M_CYCLE_END;
+	return NULL;
+		
 }
 FN_OP_CODE _op_ld_nn_a() {
 
-	_cycle_change( M_CYCLE_M1, M_CYCLE_NEXT );
-	_cycle_pc_reg_memread( M_CYCLE_M2, M_CYCLE_NEXT, devMProc->Op->OperL );
-	_cycle_pc_reg_memread( M_CYCLE_M3, M_CYCLE_NEXT, devMProc->Op->OperH );
-	_cycle_addr_reg_memwrite( M_CYCLE_M4, M_CYCLE_END, *devMProc->Op->Operands, devMProc->Reg->A );
+	if ( devMProc->Cycle->m == M_CYCLE_M1 ) {
+		devMProc->Op->pR		= devMProc->Reg->A;
+		
+		devMProc->Cycle->t			= T_CYCLE_START;
+		devMProc->Cycle->m 			= M_CYCLE_NEXT;
+		
+		return NULL;
+	}
+	if ( devMProc->Cycle->m == M_CYCLE_M2 ) {
+		
+		_mem_read( *devMProc->Reg->PC, devMProc->Op->OperL );
+		
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			(*devMProc->Reg->PC)++;
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_NEXT;
+		}
 
+		return NULL;
+	}	
+	if ( devMProc->Cycle->m == M_CYCLE_M3 ) {
+		
+		_mem_read( *devMProc->Reg->PC, devMProc->Op->OperH );
+		
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			(*devMProc->Reg->PC)++;
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}	
+	if ( devMProc->Cycle->m == M_CYCLE_M4 ) {
+		
+		devMProc->Op->dt16bit	= *devMProc->Op->Operands;
+
+		_mem_write( devMProc->Op->dt16bit, devMProc->Op->pR );
+		
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_END;
+		}
+
+		return NULL;
+	}	
+
+	devMProc->Cycle->t		= T_CYCLE_START;
+	devMProc->Cycle->m 		= M_CYCLE_END;
 	return NULL;
 		
 }
@@ -787,11 +868,44 @@ FN_OP_CODE _op_ld_nn_a() {
 
 FN_OP_CODE _op_ld_dd_nn() {
 
-	_cycle_change( M_CYCLE_M1, M_CYCLE_NEXT );
-	_cycle_pc_reg_memread( M_CYCLE_M2, M_CYCLE_NEXT, devMProc->Op->OperH );
-	_cycle_pc_reg_memread( M_CYCLE_M3, M_CYCLE_M3_A, devMProc->Op->OperL );
-	_cycle_reg16_set( M_CYCLE_M3_A, M_CYCLE_END, _get_reg16_dd( OP_REG_RR( *devMProc->Op->Code )), *devMProc->Op->Operands );
+	if ( devMProc->Cycle->m == M_CYCLE_M1 ) {
+		devMProc->Op->pRR		= _get_reg16_dd( OP_REG_RR( *devMProc->Op->Code ) );
 
+		devMProc->Cycle->t			= T_CYCLE_START;
+		devMProc->Cycle->m 			= M_CYCLE_NEXT;
+
+		return NULL;
+	}
+	if ( devMProc->Cycle->m == M_CYCLE_M2 ) {
+
+		_mem_read( *devMProc->Reg->PC, devMProc->Op->OperH );
+
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			(*devMProc->Reg->PC)++;
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}
+	if ( devMProc->Cycle->m == M_CYCLE_M3 ) {
+
+		_mem_read( *devMProc->Reg->PC, devMProc->Op->OperL );
+
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			(*devMProc->Reg->PC)++;
+
+			*devMProc->Op->pRR		= *devMProc->Op->Operands;
+
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_END;
+		}
+
+		return NULL;
+	}
+
+	devMProc->Cycle->t		= T_CYCLE_START;
+	devMProc->Cycle->m 		= M_CYCLE_END;
 	return NULL;
 
 }
@@ -860,6 +974,13 @@ FN_OP_CODE _op_DD() {
 				devMProc->Cycle->t		= T_CYCLE_START;
 				devMProc->Cycle->m 		= M_CYCLE_NEXT;
 		}
+/*
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_NEXT;
+		}
+		return NULL;
+*/
 	}
 	if ( devMProc->Cycle->m != M_CYCLE_M1 && devMProc->Cycle->m != M_CYCLE_M2 && devMProc->Cycle->m != M_CYCLE_NEXT && devMProc->Cycle->m != M_CYCLE_END ) {
 
@@ -962,22 +1083,22 @@ FN_OP_CODE _op_ED() {
 			case	0x57:	//	LD A, I
 				*devMProc->Reg->A = *devMProc->Reg->I;
 				if ( *devMProc->Reg->I < 0 ) {
-					_set_flag( devMProc->Reg, FLAG_REG_S );
+					_set_flag( FLAG_REG_S );
 				} else {
-					_reset_flag( devMProc->Reg, FLAG_REG_S );
+					_reset_flag( FLAG_REG_S );
 				}
 				if ( *devMProc->Reg->I == 0 ) {
-					_set_flag( devMProc->Reg, FLAG_REG_Z );
+					_set_flag( FLAG_REG_Z );
 				} else {
-					_reset_flag( devMProc->Reg, FLAG_REG_Z );
+					_reset_flag( FLAG_REG_Z );
 				}
-				_reset_flag( devMProc->Reg, FLAG_REG_H );
+				_reset_flag( FLAG_REG_H );
 				if ( devMProc->IFF2 == 0 ) {	// IFF2
-					_reset_flag( devMProc->Reg, FLAG_REG_PV );
+					_reset_flag( FLAG_REG_PV );
 				} else {
-					_reset_flag( devMProc->Reg, FLAG_REG_PV );
+					_reset_flag( FLAG_REG_PV );
 				}
-				_reset_flag( devMProc->Reg, FLAG_REG_N );
+				_reset_flag( FLAG_REG_N );
 
 				devMProc->Cycle->t		= T_CYCLE_START;
 				devMProc->Cycle->m 		= M_CYCLE_END;
@@ -987,22 +1108,22 @@ FN_OP_CODE _op_ED() {
 			case	0x5F:	//	LD A, R
 				*devMProc->Reg->A = *devMProc->Reg->R;
 				if ( *devMProc->Reg->R < 0 ) {
-					_set_flag( devMProc->Reg, FLAG_REG_S );
+					_set_flag( FLAG_REG_S );
 				} else {
-					_reset_flag( devMProc->Reg, FLAG_REG_S );
+					_reset_flag( FLAG_REG_S );
 				}
 				if ( *devMProc->Reg->R == 0 ) {
-					_set_flag( devMProc->Reg, FLAG_REG_Z );
+					_set_flag( FLAG_REG_Z );
 				} else {
-					_reset_flag( devMProc->Reg, FLAG_REG_Z );
+					_reset_flag( FLAG_REG_Z );
 				}
-				_reset_flag( devMProc->Reg, FLAG_REG_H );
+				_reset_flag( FLAG_REG_H );
 				if ( devMProc->IFF2 == 0 ) {	// IFF2
-					_reset_flag( devMProc->Reg, FLAG_REG_PV );
+					_reset_flag( FLAG_REG_PV );
 				} else {
-					_reset_flag( devMProc->Reg, FLAG_REG_PV );
+					_reset_flag( FLAG_REG_PV );
 				}
-				_reset_flag( devMProc->Reg, FLAG_REG_N );
+				_reset_flag( FLAG_REG_N );
 
 				devMProc->Cycle->t		= T_CYCLE_START;
 				devMProc->Cycle->m 		= M_CYCLE_END;
@@ -1013,7 +1134,10 @@ FN_OP_CODE _op_ED() {
 				devMProc->Cycle->t		= T_CYCLE_START;
 				devMProc->Cycle->m 		= M_CYCLE_NEXT;
 		}
-
+/*
+		devMProc->Cycle->t		= T_CYCLE_START;
+		devMProc->Cycle->m 		= M_CYCLE_NEXT;
+*/
 	}
 	if ( devMProc->Cycle->m != M_CYCLE_M1 && devMProc->Cycle->m != M_CYCLE_M2 && devMProc->Cycle->m != M_CYCLE_NEXT && devMProc->Cycle->m != M_CYCLE_END ) {
 
@@ -1063,7 +1187,14 @@ FN_OP_CODE _op_FD() {
 				devMProc->Cycle->t		= T_CYCLE_START;
 				devMProc->Cycle->m 		= M_CYCLE_NEXT;
 		}
+/*
+		if ( devMProc->Cycle->m == M_CYCLE_NEXT ) {
+			devMProc->Cycle->t		= T_CYCLE_START;
+			devMProc->Cycle->m 		= M_CYCLE_NEXT;
+		}
 
+		return NULL;
+*/
 	}
 	if ( devMProc->Cycle->m != M_CYCLE_M1 && devMProc->Cycle->m != M_CYCLE_M2 && devMProc->Cycle->m != M_CYCLE_NEXT && devMProc->Cycle->m != M_CYCLE_END ) {
 
@@ -1449,11 +1580,11 @@ static void * _decode() {
 		devMProc->Op->f_op_code = (FN_OP_CODE) _op_ld_de_a;
 	}
 
-	//	0x3A = 00111010	->	LD A, (nn)
+	//	00111010	->	LD A, (nn)
 	if ( ( ( *devMProc->Op->Code & OP_AM_LD_A_NN ) == OP_EM_LD_A_NN ) ) {
 		devMProc->Op->f_op_code = (FN_OP_CODE) _op_ld_a_nn;
 	}
-	//	0x32 = 00110010	->	LD (nn), A
+	//	00110010	->	LD (nn), A
 	if ( ( ( *devMProc->Op->Code & OP_AM_LD_NN_A ) == OP_EM_LD_NN_A ) ) {
 		devMProc->Op->f_op_code = (FN_OP_CODE) _op_ld_nn_a;
 	}

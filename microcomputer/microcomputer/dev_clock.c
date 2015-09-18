@@ -26,8 +26,7 @@ void *ClockTask() {
 
 	devClock->counter++;
 
-	if ( devClock->counter > 3 )
-		devClock->counter = 0;
+	devClock->counter &= 0b00000011;	//	Contiamo solo da 0 a 3
 
 	return NULL;
 }

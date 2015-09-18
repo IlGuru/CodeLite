@@ -33,6 +33,11 @@
     <File Name="dev_mproc.h"/>
     <File Name="dev_power.c"/>
     <File Name="dev_power.h"/>
+    <File Name="dev_reset.h"/>
+    <File Name="dev_reset.c"/>
+    <File Name="dev_memory.h"/>
+    <File Name="dev_memory.c"/>
+    <File Name="op_codes.h"/>
   </VirtualDirectory>
   <Settings Type="Executable">
     <GlobalSettings>

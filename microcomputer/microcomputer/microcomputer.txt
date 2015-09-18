@@ -1,1 +1,1 @@
-./Debug/main.c.o ./Debug/board.c.o ./Debug/window.c.o ./Debug/dev_clock.c.o ./Debug/dev_mproc.c.o ./Debug/dev_power.c.o   
+./Debug/main.c.o ./Debug/board.c.o ./Debug/window.c.o ./Debug/dev_clock.c.o ./Debug/dev_mproc.c.o ./Debug/dev_power.c.o ./Debug/dev_reset.c.o ./Debug/dev_memory.c.o   

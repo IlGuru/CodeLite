@@ -162,6 +162,8 @@ t_gatemode gate_check_output( p_gate pGate );
 
 void *gate_set_state( p_gate pGate, t_gatemode gatemode );
 
+t_gatemode gate_get_state( p_gate pGate );
+
 void *gate_set_val( p_gate pGate, tValStato val );
 
 tValStato gate_get_val( p_gate pGate );

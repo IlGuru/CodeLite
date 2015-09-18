@@ -3,6 +3,7 @@
 #define _DEV_MPROC
 
 #include "board.h"
+#include "op_codes.h"
 
 #define	MP_NUM_PIN		40
 
@@ -50,6 +51,39 @@
 #define MP_MAIN_REG_SET	0
 #define MP_ALTE_REG_SET	1
 
+#define INT_STATUS_M0	0	//	Interrupt status mode 0
+
+#define T_CYCLE_START	0
+#define T_CYCLE_T1		1
+#define T_CYCLE_T1_2	2
+#define T_CYCLE_T2		3
+#define T_CYCLE_T2_2	4
+#define T_CYCLE_T3		5
+#define T_CYCLE_T3_2	6
+#define T_CYCLE_T4		7
+#define T_CYCLE_T4_2	8
+#define T_CYCLE_T5		9
+#define T_CYCLE_T5_2	10
+#define T_CYCLE_T6		11
+#define T_CYCLE_T6_2	12
+#define T_CYCLE_T7		13
+#define T_CYCLE_T7_2	14
+
+#define M_CYCLE_FETCH	0	//	Stesso ciclo macchina
+#define M_CYCLE_DECODE	1	//	Stesso ciclo macchina
+#define M_CYCLE_EXECUTE	2	//	Stesso ciclo macchina
+#define M_CYCLE_M1		3	//	Stesso ciclo macchina
+#define M_CYCLE_M2		4
+#define M_CYCLE_M3		5
+#define M_CYCLE_M4		6
+#define M_CYCLE_M5		7
+#define M_CYCLE_NEXT	253	//	Per indicare di passare al prossimo ciclo macchina
+#define M_CYCLE_END		254	//	Per indicare la fine di un' operazione
+
+#define M_CYCLE_NULL	254
+
+typedef void (*FN_OP_CODE)(void);
+
 struct s_MProc {
 
 	//	GATES
@@ -58,26 +92,37 @@ struct s_MProc {
 	p_glist	pGates;
 
 	//	REGISTRI //	MP_MAIN_REG_SET, MP_ALT_REG_SET
-	char		reg_A[2];		//	ACCUMULATORE
-	char		reg_F[2];		//	FLAGS
-	char		reg_B[2];	
-	char		reg_C[2];
-	char		reg_D[2];
-	char		reg_E[2];
-	char		reg_H[2];
-	char		reg_L[2];
-	char		reg_I;			//	INTERRUPT PAGE ADDRESS REGISTER
-	char		reg_R;			//	MEMORY REFRESH REGISTER
-	short int	reg_IX;			//	INDEX REGISTER
-	short int	reg_IY;			//	INDEX REGISTER
-	short int	reg_SP;			//	STACK POINTER
-	short int	reg_PC;			//	PROGRAM COUNTER
+	dt_8bit		reg_A[2];		//	ACCUMULATORE
+	dt_8bit		reg_F[2];		//	FLAGS
+	dt_8bit		reg_B[2];	
+	dt_8bit		reg_C[2];
+	dt_8bit		reg_D[2];
+	dt_8bit		reg_E[2];
+	dt_8bit		reg_H[2];
+	dt_8bit		reg_L[2];
+	dt_8bit		reg_I;			//	INTERRUPT PAGE ADDRESS REGISTER
+	dt_8bit		reg_R;			//	MEMORY REFRESH REGISTER
+	dt_16bit	reg_IX;			//	INDEX REGISTER
+	dt_16bit	reg_IY;			//	INDEX REGISTER
+	dt_16bit	reg_SP;			//	STACK POINTER
+	dt_16bit	reg_PC;			//	PROGRAM COUNTER
+
+	dt_8bit		IFF[2];			//	Interrupt Enable Flip Flop ( 1 e 2 )
 	
-	char		stato;
+	dt_8bit		*pR;			//	Memorizzo l'indirizzo di memoria dei registri da utilizzare durante la cedodifica dell' OPCODE ecc (Puntatore a registri)
+	dt_8bit		*pR1;			//	Memorizzo l'indirizzo di memoria dei registri da utilizzare durante la cedodifica dell' OPCODE ecc (Puntatore a registri)
+	dt_16bit	pA;				//	Memorizzo un valore a 16 bit
+	
+	dt_8bit		t_cycle;
+	dt_8bit     m_cycle;
+	FN_OP_CODE	f_op_code;			//	funzione che implementa l'operazione corrispondente all' op-code da eseguire
+	
+	dt_8bit		n_reset_down_clock;	//	Numero di impulsi di clock con reset basso
+	dt_8bit       int_stat;			//	Interrupt status ( Mode0, ... )
 	
 	//	Callback
-	FN_VOID_VOID	self_connect;
-	FN_VOID_VOID	task;
+	FN_VOID_VOID		self_connect;
+	FN_VOID_VOID		task;
 };
 
 typedef struct s_MProc  t_MProc;

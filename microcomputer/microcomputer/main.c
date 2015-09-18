@@ -3,7 +3,9 @@
 #include "board.h"
 #include "dev_power.h"
 #include "dev_clock.h"
+#include "dev_reset.h"
 #include "dev_mproc.h"
+#include "dev_memory.h"
 
 #include <stdlib.h>
 #include <time.h>
@@ -31,7 +33,7 @@ void wndInit() {
 	
 	wndInitWindow( &pWindows->Main, 	NULL, 0, 0, 0, 0 );
 	wndInitWindow( &pWindows->Bus, 		&pWindows->Main, 1, 1,  60, 12 );
-	wndInitWindow( &pWindows->Gates, 	&pWindows->Main, 1, 15, 60, 12 );
+//	wndInitWindow( &pWindows->Gates, 	&pWindows->Main, 1, 15, 60, 12 );
 
 }
 
@@ -142,7 +144,9 @@ int main( int argc, char *argv[] ) {
 	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) boardInit );
 	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) PowerInit );
 	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) ClockInit );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) ResetInit );
 	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) MProcInit );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) MemoryInit );
 
 	p_ListFunct p_fList;
 	for ( p_fList = p_all_inits; p_fList != NULL; p_fList = p_fList->nList ) {
@@ -154,6 +158,7 @@ int main( int argc, char *argv[] ) {
 
 	lfunct_accoda( &p_all_self_connect, (FN_VOID_VOID) devPower->self_connect );
 	lfunct_accoda( &p_all_self_connect, (FN_VOID_VOID) devMProc->self_connect );
+	lfunct_accoda( &p_all_self_connect, (FN_VOID_VOID) devMemory->self_connect );
 
 	for ( p_fList = p_all_self_connect; p_fList != NULL; p_fList = p_fList->nList ) {
 		p_fList->fFunc();
@@ -164,18 +169,22 @@ int main( int argc, char *argv[] ) {
 
 	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) all_wires_add_tick );
 	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devPower->task );
+	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devReset->task );
 	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devClock->task );
 	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devMProc->task );
+	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devMemory->task );
 
 	//------------------------------------------------------------------------
 	//	Visualizzazione
 	//lFnDisp_accoda( &p_all_display, *(gatesShow)(&pWindows->Bus) );
 	devMProc->mp_gate[ MP__CLOCK ]->Wire->visible 	= W_VISIBLE;
-	devMProc->mp_gate[ MP_VCC ]->Wire->visible 		= W_VISIBLE;
-	devMProc->mp_gate[ MP_GND ]->Wire->visible 		= W_VISIBLE;
-	devMProc->mp_gate[ MP__RESET ]->Wire->visible 	= W_VISIBLE;
-	devMProc->mp_gate[ MP_Data_00 ]->Wire->visible 	= W_VISIBLE;
-	devMProc->mp_gate[ MP_Data_01 ]->Wire->visible 	= W_VISIBLE;
+	//devMProc->mp_gate[ MP_VCC ]->Wire->visible 		= W_VISIBLE;
+	//devMProc->mp_gate[ MP_GND ]->Wire->visible 		= W_VISIBLE;
+	//devMProc->mp_gate[ MP__RESET ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP__M1 ]->Wire->visible 		= W_VISIBLE;
+	devMProc->mp_gate[ MP__MREQ ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP__RD ]->Wire->visible 		= W_VISIBLE;
+	devMProc->mp_gate[ MP__WR ]->Wire->visible 		= W_VISIBLE;
 
 	//------------------------------------------------------------------------
 	//	Board
@@ -187,14 +196,14 @@ int main( int argc, char *argv[] ) {
 	//	Esecuzione procedure
 
 	while ( 1 ) {
-		busShow( &pWindows->Bus );
-		gatesShow( &pWindows->Gates );
+//		busShow( &pWindows->Bus );
+//		gatesShow( &pWindows->Gates );
 		
 		for ( p_fList = p_all_tasks; p_fList != NULL; p_fList = p_fList->nList ) {
 			p_fList->fFunc();
 		}
 
-		sleepMs(1000);
+//		sleepMs(1000);
 	}
 
 	wrefresh( pWindows->Bus.wnd );

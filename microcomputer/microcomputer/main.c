@@ -69,7 +69,7 @@ void* Programma() {
 	//----------------------------------------------------------------------------------
 	//	Programma:
 	
-	//	Test _op_ld_r_r
+	//	Test LD r, r'
 	/*
 	devMProc->reg_A[0]		= 0xAA;
 	devMProc->reg_B[0]		= 0xBB;
@@ -78,13 +78,13 @@ void* Programma() {
 	devMemory->memory[ 1 ] = OP_CODE_R_R1( OP_EM_LD_R_R , REG_C , REG_B );	//	LD C, B		B -> C
 	*/
 	
-	//	Test _op_ld_r_n
+	//	Test LD r,n
 	/*
 	devMemory->memory[ 0 ] = OP_CODE_R( OP_EM_LD_R_N , REG_A );	//	LD A, N		N -> A
 	devMemory->memory[ 1 ] = 0x80;
 	*/
 	
-	//	Test _op_ld_r_hl	
+	//	Test LD r, (HL)	
 	/*
 	//		Metto 0x44 in (0x0105), metto 0x01 in H, 0x05 in L così (HL) = (0x0105), poi eseguo LD A, (HL) ed alla fine in A ci sarà 0x44
 	//	LD H, N		N -> H
@@ -153,6 +153,85 @@ void* Programma() {
 	devMemory->memory[ 0 ] 	= 0x36;
 	devMemory->memory[ 1 ] 	= 0xAA;
 	devMemory->memory[ 2 ] 	= 0x44;
+	*/
+	
+	//	Test LD A, (BC)
+	/*
+	devMProc->reg_B[0]		= 1;
+	devMProc->reg_C[0]		= 5;
+	devMemory->memory[ 0x0105 ] = 0x15;
+	//	LD A, (BC)	(BC) -> A
+	devMemory->memory[ 0 ] = 0x0A;	
+	*/
+
+	//	Test LD A, (DE)
+	/*
+	devMProc->reg_D[0]		= 1;
+	devMProc->reg_E[0]		= 5;
+	devMemory->memory[ 0x0105 ] = 0x15;
+	//	LD A, (DE)	(DE) -> A
+	devMemory->memory[ 0 ] = 0x1A;	
+	*/
+
+	//	LD A, (nn)
+	/*
+	devMemory->memory[ 0x0832 ] = 0x04;
+	//	LD A, (nn)	(nn) -> A
+	devMemory->memory[ 0 ] = 0x3A;	
+	devMemory->memory[ 1 ] = 0x32;	
+	devMemory->memory[ 2 ] = 0x08;	
+	*/
+	
+	/*
+	//	LD (nn), A
+	devMProc->reg_A[0]		= 0xCC;
+	devMemory->memory[ 0 ] 	= 0x32;	
+	devMemory->memory[ 1 ] 	= 0x03;	
+	devMemory->memory[ 2 ] 	= 0x00;	
+	*/
+	
+	//	LD (BC), A
+	/*
+	devMProc->reg_A[0]		= 0xBC;
+	devMProc->reg_B[0]		= 0x00;
+	devMProc->reg_C[0]		= 0x01;
+	devMemory->memory[ 0 ] 	= 0x02;	
+	*/
+	
+	//	LD (DE), A
+	/*
+	devMProc->reg_A[0]		= 0xDE;
+	devMProc->reg_D[0]		= 0x00;
+	devMProc->reg_E[0]		= 0x01;
+	devMemory->memory[ 0 ] 	= 0x12;	
+	*/
+	
+	//LD A, I
+	/*
+	devMProc->reg_I			= 0x00;
+	devMemory->memory[ 0 ] 	= 0xED;	
+	devMemory->memory[ 1 ] 	= 0x57;	
+	*/
+	
+	//LD A, R
+	/*
+	devMProc->reg_R			= 0xFF;
+	devMemory->memory[ 0 ] 	= 0xED;	
+	devMemory->memory[ 1 ] 	= 0x5F;	
+	*/
+	
+	//LD I, A
+	/*
+	devMProc->reg_A[0]		= 0xAF;
+	devMemory->memory[ 0 ] 	= 0xED;	
+	devMemory->memory[ 1 ] 	= 0x47;	
+	*/
+	
+	//LD R, A
+	/*
+	devMProc->reg_A[0]		= 0xAF;
+	devMemory->memory[ 0 ] 	= 0xED;	
+	devMemory->memory[ 1 ] 	= 0x4F;	
 	*/
 	
 	//----------------------------------------------------------------------------------
@@ -251,7 +330,7 @@ void mprocShow( t_window* dsp ) {
 	dsp->cursor.y++;
 	mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "PC: %04X SP: %04X IX: %04X IY: %04X ", devMProc->reg_PC, devMProc->reg_SP, devMProc->reg_IX, devMProc->reg_IY );
 	dsp->cursor.y++;
-	mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "OP_CODE : %02X T_CYCLE: %02X M_CYCLE: %s", devMProc->op->code, (devMProc->t_cycle>>1)+1, ( (devMProc->m_cycle == M_CYCLE_FETCH && devMProc->m_cycle <= M_CYCLE_M1) ? "FETCH" : (devMProc->m_cycle == M_CYCLE_M2 ? "M2   " : (devMProc->m_cycle == M_CYCLE_M3 ? "M3   " : "     ") ) ) );
+	mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "OP_CODE : %02X T_CYCLE: %02X M_CYCLE: %s", devMProc->op->code, (devMProc->op->t_cycle>>1)+1, ( (devMProc->op->m_cycle == M_CYCLE_FETCH && devMProc->op->m_cycle <= M_CYCLE_M1) ? "FETCH" : (devMProc->op->m_cycle == M_CYCLE_M2 ? "M2   " : (devMProc->op->m_cycle == M_CYCLE_M3 ? "M3   " : "     ") ) ) );
 
 	wrefresh( dsp->wnd );
 }

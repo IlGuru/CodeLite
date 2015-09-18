@@ -53,35 +53,61 @@
 
 #define INT_STATUS_M0	0	//	Interrupt status mode 0
 
-#define T_CYCLE_START	0
-#define T_CYCLE_T1		1
-#define T_CYCLE_T1_2	2
-#define T_CYCLE_T2		3
-#define T_CYCLE_T2_2	4
-#define T_CYCLE_T3		5
-#define T_CYCLE_T3_2	6
-#define T_CYCLE_T4		7
-#define T_CYCLE_T4_2	8
-#define T_CYCLE_T5		9
-#define T_CYCLE_T5_2	10
-#define T_CYCLE_T6		11
-#define T_CYCLE_T6_2	12
-#define T_CYCLE_T7		13
-#define T_CYCLE_T7_2	14
+//-----------------------------
 
-#define M_CYCLE_FETCH	0	//	Stesso ciclo macchina
-#define M_CYCLE_DECODE	1	//	Stesso ciclo macchina
-#define M_CYCLE_EXECUTE	2	//	Stesso ciclo macchina
-#define M_CYCLE_M1		3	//	Stesso ciclo macchina
-#define M_CYCLE_M2		4
-#define M_CYCLE_M3		5
-#define M_CYCLE_M4		6
-#define M_CYCLE_M5		7
-#define M_CYCLE_M6		8
-#define M_CYCLE_NEXT	253	//	Per indicare di passare al prossimo ciclo macchina
-#define M_CYCLE_END		254	//	Per indicare la fine di un' operazione
+typedef unsigned char t_flag_bit;
 
-#define M_CYCLE_NULL	254
+#define FLAG_REG_C		0
+#define FLAG_REG_N		1
+#define FLAG_REG_PV		2
+#define FLAG_REG_H		4
+#define FLAG_REG_Z		6
+#define FLAG_REG_S		7
+
+//-----------------------------
+
+typedef struct s_Register	t_Register;
+typedef struct s_Register* 	p_Register;
+
+struct s_Register {
+	t_reg		reg[26];
+	
+	//	Main Register Set
+	p_reg		A;
+	p_reg		F;
+	p_reg		B;
+	p_reg		C;
+	p_reg		D;
+	p_reg		E;
+	p_reg		H;
+	p_reg		L;
+	p_reg16		AF;
+	p_reg16		BC;
+	p_reg16		DE;
+	p_reg16		HL;
+
+	//	Alternate Register Set
+	p_reg		_A;
+	p_reg		_F;
+	p_reg		_B;
+	p_reg		_C;
+	p_reg		_D;
+	p_reg		_E;
+	p_reg		_H;
+	p_reg		_L;
+	p_reg16		_AF;
+	p_reg16		_BC;
+	p_reg16		_DE;
+	p_reg16		_HL;
+
+	//	Register
+	p_reg		I;
+	p_reg		R;
+	p_reg16		PC;
+	p_reg16		SP;
+	p_reg16		IX;
+	p_reg16		IY;
+};
 
 struct s_MProc {
 
@@ -91,27 +117,38 @@ struct s_MProc {
 	//	GATES
 	p_gate	mp_gate[MP_NUM_PIN];
 	p_wire	mp_wire[MP_NUM_PIN];
-
-	//	REGISTRI //	MP_MAIN_REG_SET, MP_ALT_REG_SET
-	dt_8bit		reg_A[2];		//	ACCUMULATORE
-	dt_8bit		reg_B[2];	
-	dt_8bit		reg_C[2];
-	dt_8bit		reg_D[2];
-	dt_8bit		reg_E[2];
-	dt_8bit		reg_H[2];
-	dt_8bit		reg_L[2];
-	dt_8bit		reg_F[2];		//	FLAGS
-	dt_8bit		reg_I;			//	INTERRUPT PAGE ADDRESS REGISTER
-	dt_8bit		reg_R;			//	MEMORY REFRESH REGISTER
-	dt_16bit	reg_PC;			//	PROGRAM COUNTER
-	dt_16bit	reg_SP;			//	STACK POINTER
-	dt_16bit	reg_IX;			//	INDEX REGISTER
-	dt_16bit	reg_IY;			//	INDEX REGISTER
-
-	dt_8bit		IFF[2];			//	Interrupt Enable Flip Flop ( 1 e 2 )
 	
-	unsigned char	t_cycle;
-	unsigned char	m_cycle;
+	//	REGISTRI DEL MICROPROCESSORE
+	p_Register	Reg;
+	
+	//	REGISTRI //	MP_MAIN_REG_SET, MP_ALT_REG_SET
+	t_reg		reg_A[2];		//	ACCUMULATORE
+	t_reg		reg_F[2];		//	FLAGS
+	t_reg		reg_B[2];	
+	t_reg		reg_C[2];
+	t_reg		reg_D[2];
+	t_reg		reg_E[2];
+	t_reg		reg_H[2];
+	t_reg		reg_L[2];
+	t_reg		reg_I;			//	INTERRUPT PAGE ADDRESS REGISTER
+	t_reg		reg_R;			//	MEMORY REFRESH REGISTER
+	t_reg16		reg_PC;			//	PROGRAM COUNTER
+	t_reg16		reg_SP;			//	STACK POINTER
+	t_reg16		reg_IX;			//	INDEX REGISTER
+	t_reg16		reg_IY;			//	INDEX REGISTER
+	//	Puntatori a coppie di registri per l'indirizzamento registo-indiretto.
+	p_regind	reg_HL[2];			
+	p_regind	reg_BC[2];			
+	p_regind	reg_DE[2];			
+	p_regind	reg_AF[2];			
+	
+	dt_8bit		IFF1;			//	Interrupt Enable Flip Flop ( 1 e 2 )
+	dt_8bit		IFF2;			//	Interrupt Enable Flip Flop ( 1 e 2 )
+
+	dt_8bit     int_stat;			//	Interrupt status ( Mode0, ... )
+	
+//	unsigned char	t_cycle;
+//	unsigned char	m_cycle;
 	p_op_code		op;
 //	dt_8bit			op_code;
 //	dt_8bit		*pR;			//	Memorizzo l'indirizzo di memoria dei registri da utilizzare durante la cedodifica dell' OPCODE ecc (Puntatore a registri)
@@ -120,7 +157,6 @@ struct s_MProc {
 //	FN_OP_CODE	f_op_code;			//	funzione che implementa l'operazione corrispondente all' op-code da eseguire
 	
 	dt_8bit		n_reset_down_clock;	//	Numero di impulsi di clock con reset basso
-	dt_8bit     int_stat;			//	Interrupt status ( Mode0, ... )
 	
 	//	Callback
 	FN_VOID_VOID		self_connect;

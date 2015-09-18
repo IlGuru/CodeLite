@@ -31,6 +31,8 @@ typedef struct s_gate* 	p_gate;
 
 //-------------------------
 
+typedef void (*FN_VOID_VOID)(void);
+
 // -----------
 //	STATI
 
@@ -167,8 +169,6 @@ tValStato gate_get_val( p_gate pGate );
 //-----------------------------------------------------------------
 //	CALLBACK FUNCTIONS
 
-typedef void (*FN_VOID_VOID)(void);
-
 typedef struct s_ListFunct  t_ListFunct;
 typedef struct s_ListFunct*	p_ListFunct;
 struct s_ListFunct {
@@ -177,6 +177,7 @@ struct s_ListFunct {
 };
 
 p_ListFunct p_all_inits;
+p_ListFunct p_all_self_connect;
 p_ListFunct p_all_tasks;
 
 void *lfunct_accoda( p_ListFunct *p_fList, FN_VOID_VOID fFunct );

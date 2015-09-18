@@ -30,32 +30,77 @@ void *MProcTask() {
 */
 	p_gate pReset	= NULL;
 	p_gate pClock	= NULL;
+	p_gate pData00	= NULL;
+	p_gate pData01	= NULL;
 	p_slist pStato	= NULL;
 
 	//MP__RESET
-	pReset  = devMProc->mp_gate[ MP__RESET ];	
-	pStato = pClock->Wire->stato->att;	
-	if ( TSTBIT( pStato->flag , STATO_FLAG_FALL ) ) {	//	Reset request
-	
-		return NULL;
-		
+	pReset  = devMProc->mp_gate[ MP__RESET ];
+	if ( pReset->Wire != NULL ) {
+		pStato = pReset->Wire->stato->att;
+		if ( TSTBIT( pStato->flag , STATO_FLAG_FALL ) ) {	//	Reset request
+
+			return NULL;
+
+		}
 	}
 	
 	//MP__CLOCK
-	pClock  = devMProc->mp_gate[ MP__CLOCK ];	
-	pStato = pClock->Wire->stato->att;	
-	if ( TSTBIT( pStato->flag , STATO_FLAG_FALL ) ) {	//	Clock down
-	
-		return NULL;
-		
+	pClock  = devMProc->mp_gate[ MP__CLOCK ];
+	pData00 = devMProc->mp_gate[ MP_Data_00 ];
+	pData01 = devMProc->mp_gate[ MP_Data_01 ];
+	if ( pClock->Wire != NULL ) {
+		pStato = pClock->Wire->stato->att;
+		if ( TSTBIT( pStato->flag , STATO_FLAG_FALL ) ) {	//	Clock down
+
+			if ( gate_get_val( pData00 ) == STATO_VAL_MAX ) {
+				gate_set_val( pData00, STATO_VAL_MIN );
+			} else {
+				gate_set_val( pData00, STATO_VAL_MAX );
+			}
+
+			pStato = pData00->Wire->stato->att;
+			if ( TSTBIT( pStato->flag , STATO_FLAG_RAISE ) ) {
+				if ( gate_get_val( pData01 ) == STATO_VAL_MAX ) {
+					gate_set_val( pData01, STATO_VAL_MIN );
+				} else {
+					gate_set_val( pData01, STATO_VAL_MAX );
+				}
+			}
+
+		}
 	}
-	
+
 	return NULL;
 }
 
+void *MProcSelfConnect() {
+
+	p_gate	pGate	= NULL;
+	p_glist	pGList	= NULL;
+	p_wire	pWire	= NULL;
+	p_wlist	pWList	= NULL;
+
+	for ( pGList = devMProc->pGates; pGList != NULL; pGList = pGList->g_next ) {
+		pGate = pGList->Gate;
+
+		for ( pWList = p_all_wires; pGate->Wire == NULL && pWList != NULL; pWList = pWList->w_next ) {
+			pWire = pWList->Wire;
+
+			if ( strcmp( pGate->nome, pWire->nome ) == 0 ) {
+				gate_connect( pGate, pWire );
+			}
+		}
+
+	}
+
+	return NULL;
+
+}
+
 void *MProcInit() {
-	p_glist pGlist;
-	char 	i;
+	p_glist 	pGlist;
+	short int 	i;
 	
 	devMProc = malloc( sizeof(t_MProc) );
 
@@ -166,11 +211,11 @@ void *MProcInit() {
 	devMProc->mp_gate[ MP_Data_07    ] = gate_new( "D7", 		GATEMODE_INPUT,	 13, devMProc->mp_wire[ MP_Data_07    ] );
 
 	for ( i=0; i<MP_NUM_PIN; i++) {
-		if ( devMProc->pGates == NULL ) {								// Inizializza p_all_gates
+		if ( devMProc->pGates == NULL ) {								// devMProc->pGates
 			glist_node_accoda( &devMProc->pGates, devMProc->mp_gate[i] );
 		} else {
 			pGlist = devMProc->pGates;
-			while ( pGlist->g_next != NULL ) {						// Cerco l'ultimo nodo della lista
+			while ( pGlist->g_next != NULL ) {							// Cerco l'ultimo nodo della lista
 				pGlist = pGlist->g_next;
 			}
 			glist_node_accoda( &pGlist, devMProc->mp_gate[i] );
@@ -178,7 +223,8 @@ void *MProcInit() {
 	}
 
 	//	Callback
-	devMProc->task = (FN_VOID_VOID)MProcTask;
+	devMProc->self_connect	= (FN_VOID_VOID)MProcSelfConnect;
+	devMProc->task 			= (FN_VOID_VOID)MProcTask;
 
 	return NULL;
 }

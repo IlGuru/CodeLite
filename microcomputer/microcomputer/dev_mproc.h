@@ -76,6 +76,7 @@ struct s_MProc {
 	char		stato;
 	
 	//	Callback
+	FN_VOID_VOID	self_connect;
 	FN_VOID_VOID	task;
 };
 
@@ -84,6 +85,8 @@ typedef struct s_MProc  t_MProc;
 typedef struct s_MProc* p_MProc;
 
 p_MProc devMProc;
+
+void *MProcSelfConnect();
 
 void *MProcTask();
 

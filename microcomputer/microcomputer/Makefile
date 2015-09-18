@@ -1,7 +1,7 @@
 PROJ = microcomputer.exe
 CC = gcc
 #OBJS = main.o window.o bus.o board.o
-OBJS = main.o window.o board.o dev_clock.o dev_mproc.o
+OBJS = main.o window.o board.o dev_power.o dev_clock.o dev_mproc.o
 LDFLAGS = -lpthread -lcurses
 CFLAGS = -ggdb -O2 -Wall
 
@@ -20,6 +20,9 @@ window.o : window.h window.c
 
 board.o : board.h board.c bit_oper.h
 	$(CC) -c board.h board.c $(CFLAGS)
+
+dev_power.o : dev_power.h dev_power.c board.h board.c
+	$(CC) -c dev_power.h dev_power.c $(CFLAGS)
 
 dev_clock.o : dev_clock.h dev_clock.c board.h board.c
 	$(CC) -c dev_clock.h dev_clock.c $(CFLAGS)

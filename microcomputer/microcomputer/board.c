@@ -209,6 +209,7 @@ p_wire wire_new( char* nome, tValStato valore ) {				//	Crea un nuovo wire e ne 
 	pWire->stato   	= stato_new();
 	pWire->visible	= W_INVISIBLE;
 	pWire->gatelist	= NULL;
+	wire_set_value( pWire, valore );
 
 	if ( p_all_wires == NULL ) {								// Inizializza p_all_wires
 		wlist_node_accoda( &p_all_wires, pWire );
@@ -239,7 +240,6 @@ p_wire wire_get( char *nome, p_wlist pWlist ) {					//	Cerca un wire da una list
 
 //-------------------------
 //	Sincronizzazione wires
-
 void *all_wires_add_tick() {										//	Aggiunge uno stato copiandolo dal presendente su ogni wire mantenendoli sincronizzati
 	p_wlist pWlist;
 	p_wire  pWire;
@@ -621,9 +621,11 @@ void *lFnDisp_accoda( p_LFnDisp *p_fList, FN_VOID_DISP fFunct ) {
 
 void *boardInit() {
 	
-	p_all_wires = NULL;
-	p_all_gates = NULL;
-	p_all_tasks	= NULL;
+	p_all_wires 		= NULL;
+	p_all_gates 		= NULL;
+
+	p_all_self_connect	= NULL;
+	p_all_tasks			= NULL;
 	
 	return NULL;
 }

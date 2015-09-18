@@ -31,6 +31,8 @@
     <File Name="dev_clock.c"/>
     <File Name="dev_mproc.c"/>
     <File Name="dev_mproc.h"/>
+    <File Name="dev_power.c"/>
+    <File Name="dev_power.h"/>
   </VirtualDirectory>
   <Settings Type="Executable">
     <GlobalSettings>

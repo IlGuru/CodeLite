@@ -1,6 +1,7 @@
 
 #include "window.h"
 #include "board.h"
+#include "dev_power.h"
 #include "dev_clock.h"
 #include "dev_mproc.h"
 
@@ -18,6 +19,7 @@
 typedef struct {
 	t_window Main;
 	t_window Bus;
+	t_window Gates;
 } t_windows;
 
 typedef t_windows* p_windows;
@@ -27,9 +29,10 @@ p_windows pWindows;
 void wndInit() {
 	pWindows = malloc( sizeof( t_windows ) );
 	
-	wndInitWindow( &pWindows->Main, NULL, 0, 0, 0, 0 );
-	wndInitWindow( &pWindows->Bus, &pWindows->Main, 1, 1, 60, 30 );
-	
+	wndInitWindow( &pWindows->Main, 	NULL, 0, 0, 0, 0 );
+	wndInitWindow( &pWindows->Bus, 		&pWindows->Main, 1, 1,  60, 12 );
+	wndInitWindow( &pWindows->Gates, 	&pWindows->Main, 1, 15, 60, 12 );
+
 }
 
 //---------------------------------
@@ -68,7 +71,19 @@ void busShow( t_window* dsp ) {
 			dsp->cursor.x += 9;
 			for ( c = r->Wire->stato->oldest ; c != NULL; c = c->s_next ) {
 
-				mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%d", c->valore );
+				if ( TSTBIT( c->flag, STATO_FLAG_LOW ) )
+					mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "_" );
+
+				if ( TSTBIT( c->flag, STATO_FLAG_HIGH ) )
+					mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "'" );
+
+				if ( TSTBIT( c->flag, STATO_FLAG_RAISE ) )
+					mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "/" );
+
+				if ( TSTBIT( c->flag, STATO_FLAG_FALL ) )
+					mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "\\" );
+
+				//mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%d", c->valore );
 				dsp->cursor.x += 1;
 
 			}
@@ -115,18 +130,19 @@ void gatesShow( t_window* dsp ) {
 
 int main( int argc, char *argv[] ) {
 
-	p_gate g0;
-	p_gate g1;
-	p_wire w_reset, w_clock;
-	p_bus  b_signals;
+//	p_gate g0;
+//	p_gate g1;
+//	p_wire w_reset, w_clock;
+//	p_bus  b_signals;
 
 	//------------------------------------------------------------------------
 	//	Callback Init
 
-	lfunct_accoda( &p_all_inits, (FN_VOID_VOID)Init );
-	lfunct_accoda( &p_all_inits, (FN_VOID_VOID)boardInit );
-	lfunct_accoda( &p_all_inits, (FN_VOID_VOID)ClockInit );
-	lfunct_accoda( &p_all_inits, (FN_VOID_VOID)MProcInit );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) Init );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) boardInit );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) PowerInit );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) ClockInit );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) MProcInit );
 
 	p_ListFunct p_fList;
 	for ( p_fList = p_all_inits; p_fList != NULL; p_fList = p_fList->nList ) {
@@ -134,32 +150,45 @@ int main( int argc, char *argv[] ) {
 	}
 
 	//------------------------------------------------------------------------
+	//	Callback self connect
+
+	lfunct_accoda( &p_all_self_connect, (FN_VOID_VOID) devPower->self_connect );
+	lfunct_accoda( &p_all_self_connect, (FN_VOID_VOID) devMProc->self_connect );
+
+	for ( p_fList = p_all_self_connect; p_fList != NULL; p_fList = p_fList->nList ) {
+		p_fList->fFunc();
+	}
+
+	//------------------------------------------------------------------------
 	//	Callback task
 
-	lfunct_accoda( &p_all_tasks, all_wires_add_tick );
-	lfunct_accoda( &p_all_tasks, devClock->task );
-	lfunct_accoda( &p_all_tasks, devMProc->task );
+	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) all_wires_add_tick );
+	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devPower->task );
+	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devClock->task );
+	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devMProc->task );
 
 	//------------------------------------------------------------------------
 	//	Visualizzazione
 	//lFnDisp_accoda( &p_all_display, *(gatesShow)(&pWindows->Bus) );
-	
+	devMProc->mp_gate[ MP__CLOCK ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_VCC ]->Wire->visible 		= W_VISIBLE;
+	devMProc->mp_gate[ MP_GND ]->Wire->visible 		= W_VISIBLE;
+	devMProc->mp_gate[ MP__RESET ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_Data_00 ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_Data_01 ]->Wire->visible 	= W_VISIBLE;
+
 	//------------------------------------------------------------------------
 	//	Board
 
-	b_signals = new_bus( "SIGNALS", NULL );
-	bus_add_wire( b_signals,  devClock->w_clock );
-	bus_add_wire( b_signals,  devClock->w_clock );
-
-	//gate_connect( devMProc->g_CLOCK, devClock->w_clock );
-	gate_connect( devMProc->mp_gate[ MP__CLOCK     ], devClock->w_clock );
+	//b_signals = new_bus( "SIGNALS", NULL );
+	//bus_add_wire( b_signals,  devClock->w_clock );
 
 	//------------------------------------------------------------------------
 	//	Esecuzione procedure
 
 	while ( 1 ) {
-		//busShow( &pWindows->Bus );
-		gatesShow( &pWindows->Bus );
+		busShow( &pWindows->Bus );
+		gatesShow( &pWindows->Gates );
 		
 		for ( p_fList = p_all_tasks; p_fList != NULL; p_fList = p_fList->nList ) {
 			p_fList->fFunc();
@@ -173,8 +202,8 @@ int main( int argc, char *argv[] ) {
 	//------------------------------------------------------------------------
 	//	FINE
 
-	free(g0);
-	free(g1);
+//	free(g0);
+//	free(g1);
 
 	return 0;
 

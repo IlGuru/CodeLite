@@ -3,11 +3,31 @@
 //---------------------------------
 
 void *ClockTask() {
-	if ( gate_get_val( devClock->g_clock ) == 0 ) {
-		gate_set_val( devClock->g_clock, 1 );
-	} else {
-		gate_set_val( devClock->g_clock, 0 );
+	p_gate pGate = NULL;
+
+	pGate = devClock->g_clock;
+
+	switch ( devClock->counter ) {
+		case 0:
+			gate_set_val( pGate, STATO_VAL_MIN );
+			break;
+		case 1:
+			gate_set_val( pGate, STATO_VAL_MIN );
+			break;
+		case 2:
+			gate_set_val( pGate, STATO_VAL_MAX );
+			break;
+		case 3:
+			gate_set_val( pGate, STATO_VAL_MAX );
+			break;
+		default:
+			break;
 	}
+
+	devClock->counter++;
+
+	if ( devClock->counter > 3 )
+		devClock->counter = 0;
 
 	return NULL;
 }
@@ -15,8 +35,12 @@ void *ClockTask() {
 void *ClockInit() {
 	devClock = malloc( sizeof(t_Clock) );
 
-	devClock->w_clock = wire_new( "CLOCK", '\0' );
-	devClock->g_clock = gate_new( "G_CLOCK", GATEMODE_OUTPUT, 1, devClock->w_clock );
+	devClock->counter = 0;
+
+	devClock->w_clock = wire_new( "_CLOCK", STATO_VAL_MIN );
+
+	devClock->g_clock = gate_new( "_CLOCK", GATEMODE_OUTPUT, 1, devClock->w_clock );
+
 	devClock->task = (FN_VOID_VOID)ClockTask;
 
 	return NULL;

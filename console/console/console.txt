@@ -1,1 +1,0 @@
-./Debug/console_common.c.o ./Debug/console_display.c.o ./Debug/console_keyboard.c.o ./Debug/console_main.c.o ./Debug/console_registry.c.o ./Debug/console_screen.c.o   

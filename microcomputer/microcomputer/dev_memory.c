@@ -4,34 +4,23 @@
 
 static dt_16bit _mem_read_address() {
 	dt_16bit b	= 0;
-	
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_13 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_12 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_11 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_10 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_09 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_08 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_07 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_06 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_05 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_04 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_03 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_02 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_01 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
-	b <<= 1;
-	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_00 ] ) == STATO_VAL_MIN ) ? 0 : 1 );	//	8192
+
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_15 ] ) == STATO_VAL_MIN ) ? 0 : 0x8000 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_14 ] ) == STATO_VAL_MIN ) ? 0 : 0x4000 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_13 ] ) == STATO_VAL_MIN ) ? 0 : 0x2000 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_12 ] ) == STATO_VAL_MIN ) ? 0 : 0x1000 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_11 ] ) == STATO_VAL_MIN ) ? 0 : 0x0800 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_10 ] ) == STATO_VAL_MIN ) ? 0 : 0x0400 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_09 ] ) == STATO_VAL_MIN ) ? 0 : 0x0200 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_08 ] ) == STATO_VAL_MIN ) ? 0 : 0x0100 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_07 ] ) == STATO_VAL_MIN ) ? 0 : 0x0080 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_06 ] ) == STATO_VAL_MIN ) ? 0 : 0x0040 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_05 ] ) == STATO_VAL_MIN ) ? 0 : 0x0020 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_04 ] ) == STATO_VAL_MIN ) ? 0 : 0x0010 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_03 ] ) == STATO_VAL_MIN ) ? 0 : 0x0008 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_02 ] ) == STATO_VAL_MIN ) ? 0 : 0x0004 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_01 ] ) == STATO_VAL_MIN ) ? 0 : 0x0002 );
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Address_00 ] ) == STATO_VAL_MIN ) ? 0 : 0x0001 );	//	8192
 
 	return b;
 }

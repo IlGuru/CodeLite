@@ -3,7 +3,7 @@
 #define _DEV_MEMORY
 
 #include "board.h"
-#include "op_codes.h"
+#include "op_codes.h"	//	dt_8bit, dt_16bit
 
 #define	MEM_NUM_PIN		30
 

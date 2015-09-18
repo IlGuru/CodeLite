@@ -38,6 +38,9 @@
     <File Name="dev_memory.h"/>
     <File Name="dev_memory.c"/>
     <File Name="op_codes.h"/>
+    <File Name="op_codes.c"/>
+    <File Name="registry.h"/>
+    <File Name="registry.c"/>
   </VirtualDirectory>
   <Settings Type="Executable">
     <GlobalSettings>

@@ -1,0 +1,5 @@
+{
+ "svn-settings": {
+  "m_repoPath": "F:\\GCC\\progetti_c\\CodeLite\\microcomputer"
+ }
+}

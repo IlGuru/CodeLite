@@ -3,6 +3,7 @@
 #define _REGISTRY
 
 #include <stdlib.h>
+#include "bit_oper.h"
 
 //	Tipi per registri
 
@@ -57,10 +58,23 @@ struct s_Register {
 	p_reg16		IY;
 };
 
+//-----------------------------
+
+typedef unsigned char t_flag_bit;
+
+#define FLAG_REG_C		0
+#define FLAG_REG_N		1
+#define FLAG_REG_PV		2
+#define FLAG_REG_H		4
+#define FLAG_REG_Z		6
+#define FLAG_REG_S		7
+
 //--------------------------------------
 
 void * _init_registry( p_Register Reg );
-
 void * _reset_registry( p_Register Reg );
+
+void * _set_flag( p_Register Reg, t_flag_bit flag );
+void * _reset_flag( p_Register Reg, t_flag_bit flag );
 
 #endif

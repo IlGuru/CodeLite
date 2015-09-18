@@ -72,9 +72,11 @@ typedef unsigned char t_flag_bit;
 //--------------------------------------
 
 void * _init_registry( p_Register Reg );
+
 void * _reset_registry( p_Register Reg );
 
 void * _set_flag( p_Register Reg, t_flag_bit flag );
+
 void * _reset_flag( p_Register Reg, t_flag_bit flag );
 
 #endif

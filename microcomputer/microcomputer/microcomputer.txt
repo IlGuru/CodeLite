@@ -1,0 +1,1 @@
+./Debug/main.c.o ./Debug/board.c.o ./Debug/window.c.o ./Debug/dev_clock.c.o ./Debug/dev_mproc.c.o   

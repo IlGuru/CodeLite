@@ -53,11 +53,15 @@ struct s_slist {
 // -----------
 //	WIRES
 
+#define W_VISIBLE		0
+#define W_INVISIBLE		1
+
 p_wlist	p_all_wires;
 
 struct s_wire {
 	char 		*nome;		//	Nome linea
 	p_stato  	stato;		//	Stato linea
+	char		visible;	//	Visibile nei grafici
 	p_glist		gatelist;	//	LIsta di gates collegati
 };
 
@@ -82,6 +86,7 @@ typedef char t_gatemode;
 struct s_gate {
 	char* 		nome;			//	Nome porta
 	char		gate_mode;		//
+	char		pin;			//	Numero del pin nel package
 	p_wire		Wire;			//	Linea collegata
 };
 
@@ -119,50 +124,75 @@ struct s_device {
 
 p_wire wire_new( char* nome, tValStato valore );
 
-void wire_set_value( p_wire p_wire, tValStato valore );
+void *wire_set_value( p_wire p_wire, tValStato valore );
 
 tValStato wire_get_value( p_wire pWire );
 
-void all_wires_add_tick();
+void *all_wires_add_tick();
 
 
 
 p_bus new_bus( char *nome, p_wire pWire );
 
-void bus_add_wire( p_bus pBus,  p_wire pWire );
+void *bus_add_wire( p_bus pBus,  p_wire pWire );
 
 
+void *glist_node_accoda( p_glist *gList, p_gate pGate );
 
-p_gate gate_new( char* nome, t_gatemode gatemode, p_wire pWire );
+p_gate gate_new( char* nome, t_gatemode gatemode, char pin, p_wire pWire );
 
-void gate_connect( p_gate pGate, p_wire pWire );
+void *gate_connect( p_gate pGate, p_wire pWire );
 
 t_gatemode gate_check_output( p_gate pGate );
 
-void gate_set_state( p_gate pGate, t_gatemode gatemode );
+void *gate_set_state( p_gate pGate, t_gatemode gatemode );
 
-void gate_set_val( p_gate pGate, tValStato val );
+void *gate_set_val( p_gate pGate, tValStato val );
 
 tValStato gate_get_val( p_gate pGate );
 
 //-----------------------------------------------------------------
 //	CALLBACK FUNCTIONS
 
-typedef void (*FNINPUT)(void);
+typedef void (*FN_VOID_VOID)(void);
 
 typedef struct s_ListFunct  t_ListFunct;
-
 typedef struct s_ListFunct*	p_ListFunct;
-
 struct s_ListFunct {
-	FNINPUT		fFunc;
+	FN_VOID_VOID		fFunc;
 	p_ListFunct	nList;
 };
 
 p_ListFunct p_all_inits;
 p_ListFunct p_all_tasks;
 
-void lfunct_accoda( p_ListFunct *p_fList, FNINPUT fFunct );
+void *lfunct_accoda( p_ListFunct *p_fList, FN_VOID_VOID fFunct );
+
+//--
+
+/*
+#include "window.h"
+
+typedef struct {
+	t_window Main;
+	t_window Bus;
+} t_windows;
+
+typedef t_windows* p_windows;
+
+typedef void (*FN_VOID_DISP)(t_window* dsp);
+
+typedef struct s_LFnDisp  	t_LFnDisp;
+typedef struct s_LFnDisp*	p_LFnDisp;
+struct s_LFnDisp {
+	FN_VOID_DISP		fFunc;
+	p_LFnDisp	nList;
+};
+
+p_LFnDisp   p_all_display;
+
+void *lFnDisp_accoda( p_LFnDisp *p_fList, FN_VOID_DISP fFunct );
+*/
 
 //-------------------------
 //	INIT

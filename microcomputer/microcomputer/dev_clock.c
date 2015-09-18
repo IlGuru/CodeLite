@@ -16,8 +16,8 @@ void *ClockInit() {
 	devClock = malloc( sizeof(t_Clock) );
 
 	devClock->w_clock = wire_new( "CLOCK", '\0' );
-	devClock->g_clock = gate_new( "G_CLOCK", GATEMODE_OUTPUT, devClock->w_clock );
-	devClock->task = (FNINPUT)ClockTask;
+	devClock->g_clock = gate_new( "G_CLOCK", GATEMODE_OUTPUT, 1, devClock->w_clock );
+	devClock->task = (FN_VOID_VOID)ClockTask;
 
 	return NULL;
 }

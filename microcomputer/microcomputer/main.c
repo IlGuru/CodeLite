@@ -57,27 +57,42 @@ void *Init() {
 void busShow( t_window* dsp ) {
 
 	p_wlist r;
-	p_glist g;
 	p_slist	c;
 
 	dsp->cursor.y = dsp->start.y;
 	for ( r = p_all_wires; r != NULL; r=r->w_next ) {
 		
-		dsp->cursor.x = dsp->start.x;
-		mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%s: ", r->Wire->nome );
-		dsp->cursor.x += 9;
-		for ( c = r->Wire->stato->oldest ; c != NULL; c = c->s_next ) {
+		if ( r->Wire->visible == W_VISIBLE ) {
+			dsp->cursor.x = dsp->start.x;
+			mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%s: ", r->Wire->nome );
+			dsp->cursor.x += 9;
+			for ( c = r->Wire->stato->oldest ; c != NULL; c = c->s_next ) {
 
-			mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%d", c->valore );
-			dsp->cursor.x += 1;
+				mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%d", c->valore );
+				dsp->cursor.x += 1;
 
+			}
+			dsp->cursor.y++;
 		}
-		dsp->cursor.y++;
 	}
 
-	dsp->cursor.y++;
-	for ( g = p_all_gates; g != NULL; g=g->g_next ) {
-		dsp->cursor.x = dsp->start.x;
+	wrefresh( dsp->wnd );
+}
+
+void gatesShow( t_window* dsp ) {
+	p_glist g;
+	char c;
+	
+	dsp->cursor.y = dsp->start.y;
+	c = 0;
+	for ( g = devMProc->pGates; g != NULL; g=g->g_next ) {
+		if ( c == 4 ) {
+			c = 0;
+			dsp->cursor.y++;
+		}
+		if ( c == 0 ) 
+			dsp->cursor.x = dsp->start.x;
+		
 		mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%s: ", g->Gate->nome );
 		dsp->cursor.x += 9;
 
@@ -86,8 +101,11 @@ void busShow( t_window* dsp ) {
 		} else {
 			mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%d", g->Gate->Wire->stato->att->valore );
 		}
+		dsp->cursor.x += 3;
 
-		dsp->cursor.y++;
+		c++;
+
+		wrefresh( dsp->wnd );
 	}
 
 	wrefresh( dsp->wnd );
@@ -105,10 +123,10 @@ int main( int argc, char *argv[] ) {
 	//------------------------------------------------------------------------
 	//	Callback Init
 
-	lfunct_accoda( &p_all_inits, (FNINPUT)Init );
-	lfunct_accoda( &p_all_inits, (FNINPUT)boardInit );
-	lfunct_accoda( &p_all_inits, (FNINPUT)ClockInit );
-	lfunct_accoda( &p_all_inits, (FNINPUT)MProcInit );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID)Init );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID)boardInit );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID)ClockInit );
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID)MProcInit );
 
 	p_ListFunct p_fList;
 	for ( p_fList = p_all_inits; p_fList != NULL; p_fList = p_fList->nList ) {
@@ -123,27 +141,26 @@ int main( int argc, char *argv[] ) {
 	lfunct_accoda( &p_all_tasks, devMProc->task );
 
 	//------------------------------------------------------------------------
+	//	Visualizzazione
+	//lFnDisp_accoda( &p_all_display, *(gatesShow)(&pWindows->Bus) );
+	
+	//------------------------------------------------------------------------
 	//	Board
-
-//	w_reset = wire_new( "WIRE1", '\0' );
-//	w_clock = wire_new( "WIRE2", '\0' );
 
 	b_signals = new_bus( "SIGNALS", NULL );
 	bus_add_wire( b_signals,  devClock->w_clock );
 	bus_add_wire( b_signals,  devClock->w_clock );
-//	bus_add_wire( b_signals,  w_reset );
-//	bus_add_wire( b_signals,  w_clock );
-//	g0 = gate_new( "G0", GATEMODE_INPUT, devClock->w_clock );
-//	g1 = gate_new( "G1", GATEMODE_INPUT, devClock->w_clock );
 
-	gate_connect( devMProc->g_Clock, devClock->w_clock );
+	//gate_connect( devMProc->g_CLOCK, devClock->w_clock );
+	gate_connect( devMProc->mp_gate[ MP__CLOCK     ], devClock->w_clock );
 
 	//------------------------------------------------------------------------
 	//	Esecuzione procedure
 
 	while ( 1 ) {
-		busShow( &pWindows->Bus );
-
+		//busShow( &pWindows->Bus );
+		gatesShow( &pWindows->Bus );
+		
 		for ( p_fList = p_all_tasks; p_fList != NULL; p_fList = p_fList->nList ) {
 			p_fList->fFunc();
 		}

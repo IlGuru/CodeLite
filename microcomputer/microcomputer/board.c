@@ -3,11 +3,13 @@
 //-------------------------
 //	STATI
 
-void slist_set( p_slist pSlist, tValStato valore ) {			//	Scrive il valore dello stato nel nodo dalla lista
+void *slist_set( p_slist pSlist, tValStato valore ) {			//	Scrive il valore dello stato nel nodo dalla lista
 	pSlist->valore = valore;
+
+	return NULL;
 }
 
-void slist_del( p_slist pSlist ) {								//	Elimina il nodo dalla lista collegando tra loro precedente e successivo
+void *slist_del( p_slist pSlist ) {								//	Elimina il nodo dalla lista collegando tra loro precedente e successivo
 	p_slist p_sprev;
 	p_slist p_snext;
 
@@ -18,9 +20,11 @@ void slist_del( p_slist pSlist ) {								//	Elimina il nodo dalla lista collega
 		p_sprev->s_next = p_snext;
 	if ( p_snext != NULL ) 
 		p_snext->s_prev = p_sprev;
+
+	return NULL;
 }
 
-void slist_add( p_slist *pListaStati ) {						//	Aggiunge un nuovo stato e ne accoda il precedente
+void *slist_add( p_slist *pListaStati ) {						//	Aggiunge un nuovo stato e ne accoda il precedente
 	p_slist pSlist;
 	pSlist = malloc( sizeof(t_slist) );
 
@@ -46,28 +50,30 @@ p_stato stato_new() {											//	Crea un nuovo stato
 	p_stato pStato;
 	pStato = malloc( sizeof(t_stato) );
 
-//	pStato->att 	= slist_add( NULL );					//	Puntatore al nodo attuale della lista e creazione del primo nodo
 	pStato->att		= NULL;
-	slist_add( &pStato->att );								//	Puntatore al nodo attuale della lista e creazione del primo nodo
-	pStato->oldest	= pStato->att;							//	Puntatore all'ultimo nodo della lista
-	pStato->entries= 1;										//	Numero di nodi
+	slist_add( &pStato->att );									//	Puntatore al nodo attuale della lista e creazione del primo nodo
+	pStato->oldest	= pStato->att;								//	Puntatore all'ultimo nodo della lista
+	pStato->entries= 1;											//	Numero di nodi
 
 	return pStato;
 }
 
-void stato_add( p_stato pStato ) {								//	Aggiunta di un valore allo stato
-//	pStato->att = slist_add( pStato->att );
+void *stato_add( p_stato pStato ) {								//	Aggiunta di un valore allo stato
 	slist_add( &pStato->att );
 	pStato->entries++;
+
+	return NULL;
 }
 
-void stato_del_last( p_stato pStato ) {							//	Eliminazione dell'ultimo stato
+void *stato_del_last( p_stato pStato ) {						//	Eliminazione dell'ultimo stato
 	p_slist p_snewoldest;
 
 	p_snewoldest 	= pStato->oldest->s_next;
 	slist_del( pStato->oldest );
 	pStato->oldest = p_snewoldest;
 	pStato->entries--;
+
+	return NULL;
 }
 
 //-------------------------
@@ -91,61 +97,70 @@ char wlist_node_exists( p_wlist pWList, p_wire pWire ) {
 	return 0;
 }
 
-void wlist_node_add( p_wlist *w_prev, p_wlist *w_next, p_wire pWire ) {
+void *wlist_node_add( p_wlist *w_prev, p_wlist *w_next, p_wire pWire ) {
 	p_wlist pWlist;
 
+	if ( ( w_prev != NULL ) && ( wlist_node_exists( *w_prev, pWire ) != 0 ) )
+		return NULL;
+	if ( ( w_next != NULL ) && ( wlist_node_exists( *w_next, pWire ) != 0 ) )
+		return NULL;
+		
 	pWlist = malloc( sizeof(t_wlist) );
 
 	pWlist->Wire	= pWire;
 	if ( w_prev != NULL ) {
-		pWlist->w_prev 	= *w_prev;				//	Accodamento
+		pWlist->w_prev 	= *w_prev;								//	Accodamento
 		if ( pWlist->w_prev != NULL )
-			pWlist->w_prev->w_next = pWlist;	//	Link dal precedente a questo
+			pWlist->w_prev->w_next = pWlist;					//	Link dal precedente a questo
 	} else {
 		pWlist->w_prev	= NULL;
-		*w_next         = pWlist;				//	Feedback
+		*w_next         = pWlist;								//	Feedback
 	}
 	if ( w_next != NULL ) {
-		pWlist->w_next 	= *w_next;				//	Impilamento
+		pWlist->w_next 	= *w_next;								//	Impilamento
 		if ( pWlist->w_next != NULL )
-			pWlist->w_next->w_prev = pWlist;	//	Link dal successivo a questo
+			pWlist->w_next->w_prev = pWlist;					//	Link dal successivo a questo
 	} else {
 		pWlist->w_next	= NULL;
-		*w_prev         = pWlist;				//	Feedback
+		*w_prev         = pWlist;								//	Feedback
 	}
 
 	return NULL;
 }
 
-void wlist_node_impila( p_wlist *wList, p_wire pWire ) {
-	if ( wlist_node_exists( *wList, pWire ) == 0 )
-		wlist_node_add( NULL, wList, pWire );
+void *wlist_node_impila( p_wlist *wList, p_wire pWire ) {
+	wlist_node_add( NULL, wList, pWire );
 
 	return NULL;
 }
 
-void wlist_node_accoda( p_wlist *wList, p_wire pWire ) {
-	if ( wlist_node_exists( *wList, pWire ) == 0 )
-		wlist_node_add( wList, NULL, pWire );
+void *wlist_node_accoda( p_wlist *wList, p_wire pWire ) {
+	wlist_node_add( wList, NULL, pWire );
 
 	return NULL;
 }
 
-void wire_set_value( p_wire pWire, tValStato valore ) {			//	Scrive il valore nello stato attuale di wire
+void *wire_set_value( p_wire pWire, tValStato valore ) {		//	Scrive il valore nello stato attuale di wire
 	pWire->stato->att->valore = valore;
+	
+	return NULL;
 }
 
 tValStato wire_get_value( p_wire pWire ) {						//	Legge il valore dello stato attuale di wire
 	return pWire->stato->att->valore;
 }
 
-void wire_add_stato( p_wire pWire ) {							//	Aggiunge una posizione nella history dello stato di wire
+void *wire_add_stato( p_wire pWire ) {							//	Aggiunge una posizione nella history dello stato di wire
 	stato_add( pWire->stato );
+	
+	return NULL;
 }
 
-void wire_add_set( p_wire pWire, tValStato valore ) {			//	Aggiunge una posizione nella history dello stato di wire e ne scrive il valore nello stato attuale
+void *wire_add_set( p_wire pWire, tValStato valore ) {			//	Aggiunge una posizione nella history dello stato di wire e ne scrive il valore nello stato attuale
 	wire_add_stato( pWire );
 	wire_set_value( pWire, valore );
+	
+	return NULL;
 }
 
 p_wire wire_new( char* nome, tValStato valore ) {				//	Crea un nuovo wire e ne scrive il valore attuale
@@ -156,6 +171,7 @@ p_wire wire_new( char* nome, tValStato valore ) {				//	Crea un nuovo wire e ne 
 
 	pWire->nome 	= nome;
 	pWire->stato   	= stato_new();
+	pWire->visible	= W_INVISIBLE;
 	pWire->gatelist	= NULL;
 
 	if ( p_all_wires == NULL ) {								// Inizializza p_all_wires
@@ -188,7 +204,7 @@ p_wire wire_get( char *nome, p_wlist pWlist ) {					//	Cerca un wire da una list
 	//-------------------------
 	//	Sincronizzazione wires
 
-void all_wires_add_tick() {										//	Aggiunge uno stato copiandolo dal presendente su ogni wire mantenendoli sincronizzati
+void *all_wires_add_tick() {										//	Aggiunge uno stato copiandolo dal presendente su ogni wire mantenendoli sincronizzati
 	p_wlist pWlist;
 	p_wire  pWire;
 
@@ -204,9 +220,11 @@ void all_wires_add_tick() {										//	Aggiunge uno stato copiandolo dal presen
 		pWlist = pWlist->w_next;
 
 	}
+	
+	return NULL;
 }
 
-void all_wires_del_last_tick() {								//	Aggiunge uno stato copiandolo dal presendente su ogni wire mantenendoli sincronizzati
+void *all_wires_del_last_tick() {								//	Aggiunge uno stato copiandolo dal presendente su ogni wire mantenendoli sincronizzati
 	p_wlist pWlist;
 	p_wire  pWire;
 
@@ -217,15 +235,40 @@ void all_wires_del_last_tick() {								//	Aggiunge uno stato copiandolo dal pre
 
 		pWlist = pWlist->w_next;
 	}
+	
+	return NULL;
 }
 
 
 //-------------------------
 //	BUS
 
-void blist_node_add( p_blist *b_prev, p_blist *b_next, p_bus pBus ) {
+char blist_node_exists( p_blist pBList, p_bus pBus ) {
+	p_blist pGStart = NULL;
+	if ( pBList != NULL && pBus != NULL) {
+		pGStart = pBList;
+		while ( pBList->b_next != NULL && pBList->b_next != pGStart ) {	//	Cerco la fine della lista prevenendo la possibilità di loopare all'infinito su liste cicliche.
+			pBList = pBList->b_next;
+		}
+		pGStart = pBList;
+		while ( pBList != NULL && pBList->b_prev != pGStart ) {			//	Cerco l'inizio della lista prevenendo la possibilità di loopare all'infinito su liste cicliche.
+			if ( pBList->Bus == pBus )
+				return 1;
+				
+			pBList = pBList->b_prev;
+		}
+	}
+	return 0;
+}
+
+void *blist_node_add( p_blist *b_prev, p_blist *b_next, p_bus pBus ) {
 	p_blist pBList;
 
+	if ( ( b_prev != NULL ) && ( blist_node_exists( *b_prev, pBus ) != 0 ) )
+		return NULL;
+	if ( ( b_next != NULL ) && ( blist_node_exists( *b_next, pBus ) != 0 ) )
+		return NULL;
+		
 	pBList = malloc( sizeof(t_blist) );
 
 	pBList->Bus		= pBus;
@@ -249,13 +292,13 @@ void blist_node_add( p_blist *b_prev, p_blist *b_next, p_bus pBus ) {
 	return NULL;
 }
 
-void blist_node_impila( p_blist *bList, p_bus pBus ) {
+void *blist_node_impila( p_blist *bList, p_bus pBus ) {
 	blist_node_add( NULL, bList, pBus );
 
 	return NULL;
 }
 
-void blist_node_accoda( p_blist *bList, p_bus pBus ) {
+void *blist_node_accoda( p_blist *bList, p_bus pBus ) {
 	blist_node_add( bList, NULL, pBus );
 
 	return NULL;
@@ -306,7 +349,7 @@ p_wire bus_get_wire( p_bus pBus, char *nome ) {					//	Cerca un wire in un bus
 }
 */
 
-void bus_add_wire( p_bus pBus,  p_wire pWire ) {				//	Aggiunge un wire al bus
+void *bus_add_wire( p_bus pBus,  p_wire pWire ) {				//	Aggiunge un wire al bus
 
 	p_wlist pWlist;
 
@@ -323,6 +366,8 @@ void bus_add_wire( p_bus pBus,  p_wire pWire ) {				//	Aggiunge un wire al bus
 		}
 
 	}
+	
+	return NULL;
 }
 
 //-------------------------
@@ -346,9 +391,14 @@ char glist_node_exists( p_glist pGList, p_gate pGate ) {
 	return 0;
 }
 
-void glist_node_add( p_glist *g_prev, p_glist *g_next, p_gate pGate ) {
+void *glist_node_add( p_glist *g_prev, p_glist *g_next, p_gate pGate ) {
 	p_glist pGlist;
 
+	if ( ( g_prev != NULL ) && ( glist_node_exists( *g_prev, pGate ) != 0 ) )
+		return NULL;
+	if ( ( g_next != NULL ) && ( glist_node_exists( *g_next, pGate ) != 0 ) )
+		return NULL;
+		
 	pGlist = malloc( sizeof(t_glist) );
 
 	pGlist->Gate	= pGate;
@@ -372,27 +422,26 @@ void glist_node_add( p_glist *g_prev, p_glist *g_next, p_gate pGate ) {
 	return NULL;
 }
 
-void glist_node_impila( p_glist *gList, p_gate pGate ) {
-	if ( glist_node_exists( *gList, pGate ) == 0 )
-		glist_node_add( NULL, gList, pGate );
+void *glist_node_impila( p_glist *gList, p_gate pGate ) {
+	glist_node_add( NULL, gList, pGate );
 
 	return NULL;
 }
 
-void glist_node_accoda( p_glist *gList, p_gate pGate ) {
-	if ( glist_node_exists( *gList, pGate ) == 0 )
-		glist_node_add( gList, NULL, pGate );
+void *glist_node_accoda( p_glist *gList, p_gate pGate ) {
+	glist_node_add( gList, NULL, pGate );
 
 	return NULL;
 }
 
-p_gate gate_new( char* nome, t_gatemode gatemode, p_wire pWire ) {				//	Crea un nuovo wire e ne scrive il valore attuale
+p_gate gate_new( char* nome, t_gatemode gatemode, char pin, p_wire pWire ) {				//	Crea un nuovo wire e ne scrive il valore attuale
 	p_gate 	pGate;
 	p_glist pGlist;
 
 	pGate = malloc( sizeof(t_gate) );
 
 	pGate->nome 		= nome;
+	pGate->pin 			= pin;
 	if ( pWire != NULL ) {
 		gate_connect( pGate, pWire );
 	} else {
@@ -413,11 +462,13 @@ p_gate gate_new( char* nome, t_gatemode gatemode, p_wire pWire ) {				//	Crea un
 	return pGate;
 }
 
-void gate_connect( p_gate pGate, p_wire pWire ) {
+void *gate_connect( p_gate pGate, p_wire pWire ) {
 	if ( pGate != NULL && pWire != NULL ) {
 		pGate->Wire 	= pWire;
 		glist_node_accoda( &pWire->gatelist, pGate );
 	}
+	
+	return NULL;
 }
 
 t_gatemode gate_check_output( p_gate pGate ) {
@@ -445,7 +496,7 @@ t_gatemode gate_check_output( p_gate pGate ) {
 	return GATEMODE_OUTPUT;
 }
 
-void gate_set_state( p_gate pGate, t_gatemode gatemode ) {
+void *gate_set_state( p_gate pGate, t_gatemode gatemode ) {
 
 	if ( pGate != NULL ) {
 		pGate->gate_mode = gatemode;
@@ -455,6 +506,7 @@ void gate_set_state( p_gate pGate, t_gatemode gatemode ) {
 		if ( gate_check_output( pGate ) == GATEMODE_ERR )
 			pGate->gate_mode = GATEMODE_THREE_STATE;
 
+	return NULL;
 }
 
 t_gatemode gate_get_state( p_gate pGate ) {
@@ -464,12 +516,14 @@ t_gatemode gate_get_state( p_gate pGate ) {
 	return GATEMODE_ERR;
 }
 
-void gate_set_val( p_gate pGate, tValStato val ) {
+void *gate_set_val( p_gate pGate, tValStato val ) {
 	if ( pGate != NULL ) {
 		if ( pGate->Wire != NULL ) {
 			wire_set_value( pGate->Wire, val );
 		}
 	}
+
+	return NULL;
 }
 
 tValStato gate_get_val( p_gate pGate ) {
@@ -484,7 +538,7 @@ tValStato gate_get_val( p_gate pGate ) {
 //-------------------------
 //	CALLBACK FUNCTIONS
 
-void lfunct_accoda( p_ListFunct *p_fList, FNINPUT fFunct ) {
+void *lfunct_accoda( p_ListFunct *p_fList, FN_VOID_VOID fFunct ) {
 	p_ListFunct p_Funct, p_Node;
 
 	p_Funct = malloc( sizeof(t_ListFunct) );	//	Ultimo nodo della lista
@@ -500,7 +554,31 @@ void lfunct_accoda( p_ListFunct *p_fList, FNINPUT fFunct ) {
 		}
 		p_Node->nList = p_Funct;
 	}
+	
+	return NULL;
 }
+
+/*
+void *lFnDisp_accoda( p_LFnDisp *p_fList, FN_VOID_DISP fFunct ) {
+	p_ListFunct p_Funct, p_Node;
+
+	p_Funct = malloc( sizeof(t_LFnDisp) );	//	Ultimo nodo della lista
+	p_Funct->fFunc = fFunct;
+	p_Funct->nList = NULL;
+
+	if ( *p_fList == NULL ) {
+		*p_fList = p_Funct;
+	} else {
+		p_Node = *p_fList;
+		while ( p_Node->nList != NULL ) {
+			p_Node = p_Node->nList;
+		}
+		p_Node->nList = p_Funct;
+	}
+	
+	return NULL;
+}
+*/
 
 //-------------------------
 //	INIT
@@ -510,5 +588,6 @@ void *boardInit() {
 	p_all_wires = NULL;
 	p_all_gates = NULL;
 	p_all_tasks	= NULL;
+	
 	return NULL;
 }

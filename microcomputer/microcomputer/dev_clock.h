@@ -7,7 +7,7 @@
 struct s_Clock {
 	p_wire 	w_clock;
 	p_gate 	g_clock;
-	FNINPUT	task;
+	FN_VOID_VOID	task;
 };
 
 typedef struct s_Clock  t_Clock;

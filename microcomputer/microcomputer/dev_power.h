@@ -11,6 +11,9 @@
 
 struct s_Power {
 
+	//	DEVICE
+	p_device	dev;
+
 	//	GATES
 	p_gate	pw_gate[PW_NUM_PIN];
 	p_wire	pw_wire[PW_NUM_PIN];
@@ -19,6 +22,7 @@ struct s_Power {
 	//	Callback
 	FN_VOID_VOID	self_connect;
 	FN_VOID_VOID	task;
+	
 };
 
 typedef struct s_Power  t_Power;

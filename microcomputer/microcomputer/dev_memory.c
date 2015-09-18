@@ -36,6 +36,28 @@ static dt_16bit _mem_read_address() {
 	return b;
 }
 
+static dt_8bit _mem_read_data() {
+	dt_8bit b	= 0;
+	
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Data_07 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
+	b <<= 1;
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Data_06 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
+	b <<= 1;
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Data_05 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
+	b <<= 1;
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Data_04 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
+	b <<= 1;
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Data_03 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
+	b <<= 1;
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Data_02 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
+	b <<= 1;
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Data_01 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
+	b <<= 1;
+	b |= ( ( gate_get_val( devMemory->mem_gate[ MEM_Data_00 ] ) == STATO_VAL_MIN ) ? 0 : 1 );
+
+	return b;
+}
+
 static void _mem_send_data( dt_8bit dt ) {
 	
  	gate_set_val( devMemory->mem_gate[ MEM_Data_00 ], (TSTBIT(dt,0)==STATO_VAL_MIN ? STATO_VAL_MIN : STATO_VAL_MAX) );
@@ -56,7 +78,7 @@ void *MemorySelfConnect() {
 	p_wire	pWire	= NULL;
 	p_wlist	pWList	= NULL;
 
-	for ( pGList = devMemory->pGates; pGList != NULL; pGList = pGList->g_next ) {
+	for ( pGList = devMemory->dev->pGates; pGList != NULL; pGList = pGList->g_next ) {
 		pGate = pGList->Gate;
 
 		for ( pWList = p_all_wires; pGate->Wire == NULL && pWList != NULL; pWList = pWList->w_next ) {
@@ -76,23 +98,34 @@ void *MemorySelfConnect() {
 void *MemoryTask() {
 	p_gate 	pCE1	= NULL;
 	p_gate 	pCE2	= NULL;
+	p_gate 	pRD	    = NULL;
+	p_gate 	pWR	    = NULL;
 	p_slist pSCE1	= NULL;
 	p_slist pSCE2	= NULL;
+	p_slist pSRD	= NULL;
+	p_slist pSWR	= NULL;
 
 	dt_16bit 	ma	= 0;
 	dt_8bit		dt	= 0;
 	
 	pCE1  = devMemory->mem_gate[ MEM__CE1 ];
 	pCE2  = devMemory->mem_gate[ MEM__CE2 ];
+	pRD  = devMemory->mem_gate[ MEM__RD ];
+	pWR   = devMemory->mem_gate[ MEM__WR ];
 
 	if ( pCE1->Wire != NULL )
 		pSCE1 = pCE1->Wire->stato->att;
 	if ( pCE2->Wire != NULL )
 		pSCE2 = pCE2->Wire->stato->att;
+	if ( pRD->Wire != NULL )
+		pSRD = pRD->Wire->stato->att;
+	if ( pWR->Wire != NULL )
+		pSWR = pWR->Wire->stato->att;
 
-	if ( pSCE1 != NULL && pSCE2 != NULL ) {
+	//	Lettura
+	if ( pSCE1 != NULL && pSRD != NULL ) {
 
-		if ( TSTBIT( pSCE1->flag , STATO_FLAG_FALL ) && TSTBIT( pSCE2->flag , STATO_FLAG_FALL ) ) {
+		if ( (TSTBIT( pSCE1->flag , STATO_FLAG_FALL ) || TSTBIT( pSCE1->flag , STATO_FLAG_LOW )) && TSTBIT( pSRD->flag , STATO_FLAG_FALL ) ) {
 
 			ma = _mem_read_address();
 			dt = devMemory->memory[ ma ];
@@ -125,6 +158,20 @@ void *MemoryTask() {
 	
 	}
 
+	//	Scrittura
+	if ( pSCE1 != NULL && pSWR != NULL ) {
+
+		if ( (TSTBIT( pSCE1->flag , STATO_FLAG_FALL ) || TSTBIT( pSCE1->flag , STATO_FLAG_LOW )) && TSTBIT( pSWR->flag , STATO_FLAG_FALL ) ) {
+
+			ma = _mem_read_address();
+			dt = _mem_read_data();
+
+			devMemory->memory[ ma ] = dt;
+			
+		}
+	
+	}
+
 	return NULL;
 }
 
@@ -136,69 +183,50 @@ void *MemoryInit() {
 
 	for ( i=0; i<MEM_SIZE; i++ )
 		devMemory->memory[ i ] = 0;
-	//	Programma:
 	
-	//	Test _op_ld_r_r
-	//devMemory->memory[ 2 ] = 0b01000111;	//	LD B, A		A -> B
-
-	//	Test _op_ld_r_n
-	//devMemory->memory[ 0 ] = 0b00111110;	//	LD A, N		N -> A
-	//devMemory->memory[ 1 ] = 0b01000000;
-	//devMemory->memory[ 2 ] = 0b01000111;	//	LD B, A		A -> B
-
-	//	Test _op_ld_r_hl	
-	//		Metto 0b01010101 in (5), metto 0 in H, 5 in L così (HL) = (5), poi eseguo LD A, (HL) ed alla fine in A ci sarà 0b01010101
-	//	LD H, N		N -> H
-	//		LD H, 5
-	devMemory->memory[ 0 ] = OP_CODE_R(OP_EM_LD_R_N,REG_H);
-	devMemory->memory[ 1 ] = 0b00000000;
-	//	LD L, N		N -> H
-	//		LD L, 5
-	devMemory->memory[ 2 ] = OP_CODE_R(OP_EM_LD_R_N,REG_L);
-	devMemory->memory[ 3 ] = 0b00000101;
-	//	LD A, (HL)	(HL) -> A
-	devMemory->memory[ 4 ] = OP_CODE_R(OP_EM_LD_R_HL,REG_A);	
-	//	0b01010101 -> (5)
-	devMemory->memory[ 5 ] = 0b01010101;						
+	//	Device
+	devMemory->dev			= malloc( sizeof( t_device ) );
+	devMemory->dev->nome	= "8K RAM";
+	devMemory->dev->pGates	= NULL;
 	
 	//	Gates
-	devMemory->pGates	= NULL;
-	
-	devMemory->mem_gate[ MEM_VCC        ] = gate_new( "VCC", 		GATEMODE_INPUT,	 11, NULL );
-	devMemory->mem_gate[ MEM_GND        ] = gate_new( "GND", 		GATEMODE_INPUT,  29, NULL );
-	devMemory->mem_gate[ MEM__CE1       ] = gate_new( "_MREQ", 		GATEMODE_INPUT,  17, NULL );
-	devMemory->mem_gate[ MEM__CE2       ] = gate_new( "_RD", 		GATEMODE_INPUT,  19, NULL );
-	devMemory->mem_gate[ MEM_Address_00 ] = gate_new( "A00", 		GATEMODE_INPUT,  30, NULL );
-	devMemory->mem_gate[ MEM_Address_01 ] = gate_new( "A01", 		GATEMODE_INPUT,  31, NULL );
-	devMemory->mem_gate[ MEM_Address_02 ] = gate_new( "A02", 		GATEMODE_INPUT,  32, NULL );
-	devMemory->mem_gate[ MEM_Address_03 ] = gate_new( "A03", 		GATEMODE_INPUT,  33, NULL );
-	devMemory->mem_gate[ MEM_Address_04 ] = gate_new( "A04", 		GATEMODE_INPUT,  34, NULL );
-	devMemory->mem_gate[ MEM_Address_05 ] = gate_new( "A05", 		GATEMODE_INPUT,  35, NULL );
-	devMemory->mem_gate[ MEM_Address_06 ] = gate_new( "A06", 		GATEMODE_INPUT,  36, NULL );
-	devMemory->mem_gate[ MEM_Address_07 ] = gate_new( "A07", 		GATEMODE_INPUT,  37, NULL );
-	devMemory->mem_gate[ MEM_Address_08 ] = gate_new( "A08", 		GATEMODE_INPUT,  38, NULL );
-	devMemory->mem_gate[ MEM_Address_09 ] = gate_new( "A09", 		GATEMODE_INPUT,  39, NULL );
-	devMemory->mem_gate[ MEM_Address_10 ] = gate_new( "A10", 		GATEMODE_INPUT,  40, NULL );
-	devMemory->mem_gate[ MEM_Address_11 ] = gate_new( "A11", 		GATEMODE_INPUT,   1, NULL );
-	devMemory->mem_gate[ MEM_Address_12 ] = gate_new( "A12", 		GATEMODE_INPUT,   2, NULL );
-	devMemory->mem_gate[ MEM_Address_13 ] = gate_new( "A13", 		GATEMODE_INPUT,   3, NULL );
-	devMemory->mem_gate[ MEM_Address_14 ] = gate_new( "A14", 		GATEMODE_INPUT,   4, NULL );
-	devMemory->mem_gate[ MEM_Address_15 ] = gate_new( "A15", 		GATEMODE_INPUT,   5, NULL );
-	devMemory->mem_gate[ MEM_Data_00    ] = gate_new( "D0", 		GATEMODE_INPUT,	 14, NULL );
-	devMemory->mem_gate[ MEM_Data_01    ] = gate_new( "D1", 		GATEMODE_INPUT,	 15, NULL );
-	devMemory->mem_gate[ MEM_Data_02    ] = gate_new( "D2", 		GATEMODE_INPUT,	 12, NULL );
-	devMemory->mem_gate[ MEM_Data_03    ] = gate_new( "D3", 		GATEMODE_INPUT,	  8, NULL );
-	devMemory->mem_gate[ MEM_Data_04    ] = gate_new( "D4", 		GATEMODE_INPUT,	  7, NULL );
-	devMemory->mem_gate[ MEM_Data_05    ] = gate_new( "D5", 		GATEMODE_INPUT,	  9, NULL );
-	devMemory->mem_gate[ MEM_Data_06    ] = gate_new( "D6", 		GATEMODE_INPUT,	 10, NULL );
-	devMemory->mem_gate[ MEM_Data_07    ] = gate_new( "D7", 		GATEMODE_INPUT,	 13, NULL );
+	devMemory->mem_gate[ MEM_VCC        ] = gate_new( "VCC", 		devMemory->dev, GATEMODE_INPUT,	 11, NULL );
+	devMemory->mem_gate[ MEM_GND        ] = gate_new( "GND", 		devMemory->dev, GATEMODE_INPUT,  29, NULL );
+	devMemory->mem_gate[ MEM__CE1       ] = gate_new( "_MREQ", 		devMemory->dev, GATEMODE_INPUT,  17, NULL );
+	devMemory->mem_gate[ MEM__CE2       ] = gate_new( "_MREQ", 		devMemory->dev, GATEMODE_INPUT,  17, NULL );	//
+	devMemory->mem_gate[ MEM__RD        ] = gate_new( "_RD", 		devMemory->dev, GATEMODE_INPUT,  19, NULL );
+	devMemory->mem_gate[ MEM__WR        ] = gate_new( "_WR", 		devMemory->dev, GATEMODE_INPUT,  19, NULL );
+	devMemory->mem_gate[ MEM_Address_00 ] = gate_new( "A00", 		devMemory->dev, GATEMODE_INPUT,  30, NULL );
+	devMemory->mem_gate[ MEM_Address_01 ] = gate_new( "A01", 		devMemory->dev, GATEMODE_INPUT,  31, NULL );
+	devMemory->mem_gate[ MEM_Address_02 ] = gate_new( "A02", 		devMemory->dev, GATEMODE_INPUT,  32, NULL );
+	devMemory->mem_gate[ MEM_Address_03 ] = gate_new( "A03", 		devMemory->dev, GATEMODE_INPUT,  33, NULL );
+	devMemory->mem_gate[ MEM_Address_04 ] = gate_new( "A04", 		devMemory->dev, GATEMODE_INPUT,  34, NULL );
+	devMemory->mem_gate[ MEM_Address_05 ] = gate_new( "A05", 		devMemory->dev, GATEMODE_INPUT,  35, NULL );
+	devMemory->mem_gate[ MEM_Address_06 ] = gate_new( "A06", 		devMemory->dev, GATEMODE_INPUT,  36, NULL );
+	devMemory->mem_gate[ MEM_Address_07 ] = gate_new( "A07", 		devMemory->dev, GATEMODE_INPUT,  37, NULL );
+	devMemory->mem_gate[ MEM_Address_08 ] = gate_new( "A08", 		devMemory->dev, GATEMODE_INPUT,  38, NULL );
+	devMemory->mem_gate[ MEM_Address_09 ] = gate_new( "A09", 		devMemory->dev, GATEMODE_INPUT,  39, NULL );
+	devMemory->mem_gate[ MEM_Address_10 ] = gate_new( "A10", 		devMemory->dev, GATEMODE_INPUT,  40, NULL );
+	devMemory->mem_gate[ MEM_Address_11 ] = gate_new( "A11", 		devMemory->dev, GATEMODE_INPUT,   1, NULL );
+	devMemory->mem_gate[ MEM_Address_12 ] = gate_new( "A12", 		devMemory->dev, GATEMODE_INPUT,   2, NULL );
+	devMemory->mem_gate[ MEM_Address_13 ] = gate_new( "A13", 		devMemory->dev, GATEMODE_INPUT,   3, NULL );
+	devMemory->mem_gate[ MEM_Address_14 ] = gate_new( "A14", 		devMemory->dev, GATEMODE_INPUT,   4, NULL );
+	devMemory->mem_gate[ MEM_Address_15 ] = gate_new( "A15", 		devMemory->dev, GATEMODE_INPUT,   5, NULL );
+	devMemory->mem_gate[ MEM_Data_00    ] = gate_new( "D0", 		devMemory->dev, GATEMODE_INPUT,	 14, NULL );
+	devMemory->mem_gate[ MEM_Data_01    ] = gate_new( "D1", 		devMemory->dev, GATEMODE_INPUT,	 15, NULL );
+	devMemory->mem_gate[ MEM_Data_02    ] = gate_new( "D2", 		devMemory->dev, GATEMODE_INPUT,	 12, NULL );
+	devMemory->mem_gate[ MEM_Data_03    ] = gate_new( "D3", 		devMemory->dev, GATEMODE_INPUT,	  8, NULL );
+	devMemory->mem_gate[ MEM_Data_04    ] = gate_new( "D4", 		devMemory->dev, GATEMODE_INPUT,	  7, NULL );
+	devMemory->mem_gate[ MEM_Data_05    ] = gate_new( "D5", 		devMemory->dev, GATEMODE_INPUT,	  9, NULL );
+	devMemory->mem_gate[ MEM_Data_06    ] = gate_new( "D6", 		devMemory->dev, GATEMODE_INPUT,	 10, NULL );
+	devMemory->mem_gate[ MEM_Data_07    ] = gate_new( "D7", 		devMemory->dev, GATEMODE_INPUT,	 13, NULL );
 
 	//	Compila la gatelist con l'array di gates
 	for ( i=0; i<MEM_NUM_PIN; i++) {
-		if ( devMemory->pGates == NULL ) {								// devMemory->pGates
-			glist_node_accoda( &devMemory->pGates, devMemory->mem_gate[i] );
+		if ( devMemory->dev->pGates == NULL ) {								// devMemory->dev->pGates
+			glist_node_accoda( &devMemory->dev->pGates, devMemory->mem_gate[i] );
 		} else {
-			pGlist = devMemory->pGates;
+			pGlist = devMemory->dev->pGates;
 			while ( pGlist->g_next != NULL ) {							// Cerco l'ultimo nodo della lista
 				pGlist = pGlist->g_next;
 			}

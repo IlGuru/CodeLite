@@ -34,11 +34,22 @@ void *ClockTask() {
 void *ClockInit() {
 	devClock = malloc( sizeof(t_Clock) );
 
+	//	Device
+	devClock->dev			= malloc( sizeof( t_device ) );
+	devClock->dev->nome		= "CLOCK OSC";
+	devClock->dev->pGates	= NULL;
+	
+	//	Inizializzazione valori
+	
 	devClock->counter = 0;
+
+	//	GATES E WIRES
 
 	devClock->w_clock = wire_new( "_CLOCK", STATO_VAL_MIN );
 
-	devClock->g_clock = gate_new( "_CLOCK", GATEMODE_OUTPUT, 1, devClock->w_clock );
+	devClock->g_clock = gate_new( "_CLOCK", devClock->dev, GATEMODE_OUTPUT, 1, devClock->w_clock );
+
+	//	Callback
 
 	devClock->task = (FN_VOID_VOID)ClockTask;
 

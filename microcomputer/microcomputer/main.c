@@ -11,6 +11,12 @@
 #include <time.h>
 
 #ifdef __MINGW32__
+#define _C_WIN
+#else
+#define _C_CYGWIN
+#endif
+
+#ifdef __MINGW32__
 #include <ncursest/ncurses.h>
 #else
 #include <curses.h>
@@ -20,8 +26,12 @@
 
 typedef struct {
 	t_window Main;
+	t_window MProc;
+#ifdef _C_CYGWIN
 	t_window Bus;
 	t_window Gates;
+	t_window Memory;
+#endif
 } t_windows;
 
 typedef t_windows* p_windows;
@@ -32,9 +42,12 @@ void wndInit() {
 	pWindows = malloc( sizeof( t_windows ) );
 	
 	wndInitWindow( &pWindows->Main, 	NULL, 0, 0, 0, 0 );
-	wndInitWindow( &pWindows->Bus, 		&pWindows->Main, 1, 1,  60, 12 );
+	wndInitWindow( &pWindows->MProc, 	&pWindows->Main, 1, 1,  60, 9 );
+#ifdef _C_CYGWIN
+	wndInitWindow( &pWindows->Bus, 		&pWindows->Main, 1, 10, 60, 15 );
 //	wndInitWindow( &pWindows->Gates, 	&pWindows->Main, 1, 15, 60, 12 );
-
+	wndInitWindow( &pWindows->Memory, 	&pWindows->Main, 1, 25, 60, 15 );
+#endif
 }
 
 //---------------------------------
@@ -43,13 +56,109 @@ void sleepMs( long ms ) {
     struct timespec ts;
 	if ( ms > 0 ) {
 		ts.tv_sec  = ms/1000;
-		ts.tv_nsec = ( ms*1000 ) % 1000000;
+		ts.tv_nsec = ( ms*1000000 ) % 1000000000;
 
 		nanosleep(&ts, NULL);
 	}
 }
 
 //---------------------------------
+
+void* Programma() {
+	
+	//----------------------------------------------------------------------------------
+	//	Programma:
+	
+	//	Test _op_ld_r_r
+	/*
+	devMProc->reg_A[0]		= 0xAA;
+	devMProc->reg_B[0]		= 0xBB;
+	devMProc->reg_C[0]		= 0xCC;
+	devMemory->memory[ 0 ] = OP_CODE_R_R1( OP_EM_LD_R_R , REG_B , REG_A );	//	LD B, A		A -> B
+	devMemory->memory[ 1 ] = OP_CODE_R_R1( OP_EM_LD_R_R , REG_C , REG_B );	//	LD C, B		B -> C
+	*/
+	
+	//	Test _op_ld_r_n
+	/*
+	devMemory->memory[ 0 ] = OP_CODE_R( OP_EM_LD_R_N , REG_A );	//	LD A, N		N -> A
+	devMemory->memory[ 1 ] = 0x80;
+	*/
+	
+	//	Test _op_ld_r_hl	
+	/*
+	//		Metto 0x44 in (0x0105), metto 0x01 in H, 0x05 in L così (HL) = (0x0105), poi eseguo LD A, (HL) ed alla fine in A ci sarà 0x44
+	//	LD H, N		N -> H
+	devMProc->reg_H[0]		= 1;
+	devMProc->reg_L[0]		= 5;
+	devMemory->memory[ 0x0105 ] = 0x44;						
+	//	LD A, (HL)	(HL) -> A
+	devMemory->memory[ 0 ] = OP_CODE_R(OP_EM_LD_R_HL,REG_A);	
+	*/
+	
+	//	Test LD r, (IX+d) : r=A, d=4, IX=1 => (IX+d)=(0x05)=0xBB => A=0xBB
+	/*
+	devMProc->reg_IX	   = 1;
+	devMemory->memory[ 0 ] = 0xDD;
+	devMemory->memory[ 1 ] = OP_CODE_R(0b01000110,REG_A);
+	devMemory->memory[ 2 ] = 0x04;
+	devMemory->memory[ 3 ] = 0x00;
+	devMemory->memory[ 5 ] = 0xBB;
+	*/
+
+	//	Test LD r, (IY+d) : r=A, d=4, IY=1 => (IY+d)=(0x05)=0xCC => A=0xCC
+	/*
+	devMProc->reg_IY	   = 1;
+	devMemory->memory[ 0 ] = 0xFD;
+	devMemory->memory[ 1 ] = OP_CODE_R(0b01000110,REG_A);
+	devMemory->memory[ 2 ] = 0x04;
+	devMemory->memory[ 3 ] = 0x00;
+	devMemory->memory[ 5 ] = 0xCC;
+	*/
+	
+	//	Test LD (HL), r
+	/*
+	devMProc->reg_H[0]		= 0;
+	devMProc->reg_L[0]		= 1;
+	devMProc->reg_A[0]		= 0xAA;
+	devMemory->memory[ 0 ] 	= OP_CODE_R1(0b01110000,REG_A);
+	devMemory->memory[ 1 ] 	= 0x00;
+	*/
+	
+	//	Test LD (IX+d), r
+	/*
+	devMProc->reg_A[0]		= 0xAA;
+	devMProc->reg_IX	   	= 1;
+	devMemory->memory[ 0 ] 	= 0xDD;
+	devMemory->memory[ 1 ] 	= OP_CODE_R1(0b01110000,REG_A);
+	devMemory->memory[ 2 ] 	= 0x04;
+	devMemory->memory[ 3 ] 	= 0x00;
+	devMemory->memory[ 5 ] 	= 0x99;
+	*/
+	
+	//	LD (IY+d), r
+	/*
+	devMProc->reg_A[0]		= 0xCC;
+	devMProc->reg_IY	   	= 1;
+	devMemory->memory[ 0 ] 	= 0xFD;
+	devMemory->memory[ 1 ] 	= OP_CODE_R1(0b01110000,REG_A);
+	devMemory->memory[ 2 ] 	= 0x04;
+	devMemory->memory[ 3 ] 	= 0x00;
+	devMemory->memory[ 5 ] 	= 0x99;
+	*/
+	
+	//	LD (HL), n
+	/*
+	devMProc->reg_H[0]		= 0;
+	devMProc->reg_L[0]		= 2;
+	devMemory->memory[ 0 ] 	= 0x36;
+	devMemory->memory[ 1 ] 	= 0xAA;
+	devMemory->memory[ 2 ] 	= 0x44;
+	*/
+	
+	//----------------------------------------------------------------------------------
+
+	return NULL;
+}
 
 void *Init() {
 	wndInit();
@@ -102,7 +211,7 @@ void gatesShow( t_window* dsp ) {
 	
 	dsp->cursor.y = dsp->start.y;
 	c = 0;
-	for ( g = devMProc->pGates; g != NULL; g=g->g_next ) {
+	for ( g = devMProc->dev->pGates; g != NULL; g=g->g_next ) {
 		if ( c == 4 ) {
 			c = 0;
 			dsp->cursor.y++;
@@ -128,6 +237,53 @@ void gatesShow( t_window* dsp ) {
 	wrefresh( dsp->wnd );
 }
 
+void mprocShow( t_window* dsp ) {
+	
+	dsp->cursor.x = dsp->start.x;
+	dsp->cursor.y = dsp->start.y;
+	mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "A : %02X B : %02X C : %02X D : %02X E : %02X H : %02X L : %02X ", devMProc->reg_A[0], devMProc->reg_B[0], devMProc->reg_C[0], devMProc->reg_D[0], devMProc->reg_E[0], devMProc->reg_H[0], devMProc->reg_L[0] );
+	dsp->cursor.y++;
+	mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "A': %02X B': %02X C': %02X D': %02X E': %02X H': %02X L': %02X ", devMProc->reg_A[1], devMProc->reg_B[1], devMProc->reg_C[1], devMProc->reg_D[1], devMProc->reg_E[1], devMProc->reg_H[1], devMProc->reg_L[1] );
+	dsp->cursor.y++;
+	mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "F : %02X F': %02X ", devMProc->reg_F[0], devMProc->reg_F[1] );
+	dsp->cursor.y++;
+	mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "I : %02X R : %02X ", devMProc->reg_I, devMProc->reg_R );
+	dsp->cursor.y++;
+	mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "PC: %04X SP: %04X IX: %04X IY: %04X ", devMProc->reg_PC, devMProc->reg_SP, devMProc->reg_IX, devMProc->reg_IY );
+	dsp->cursor.y++;
+	mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "OP_CODE : %02X T_CYCLE: %02X M_CYCLE: %s", devMProc->op->code, (devMProc->t_cycle>>1)+1, ( (devMProc->m_cycle == M_CYCLE_FETCH && devMProc->m_cycle <= M_CYCLE_M1) ? "FETCH" : (devMProc->m_cycle == M_CYCLE_M2 ? "M2   " : (devMProc->m_cycle == M_CYCLE_M3 ? "M3   " : "     ") ) ) );
+
+	wrefresh( dsp->wnd );
+}
+
+void memoryShow( t_window* dsp ) {
+
+	dt_8bit 	r	= 0;
+	dt_8bit		c	= 0;
+	dt_16bit	ad	= 0;
+	
+	dsp->cursor.y = dsp->start.y;
+	for ( r = 0; r < 4; r++ ) {
+		
+		dsp->cursor.x = dsp->start.x;
+		mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%04X: ", ad );
+		dsp->cursor.x += 6;
+		for ( c = 0 ; c < 16; c++ ) {
+
+			ad = ((r<<8)|c);
+
+			mvwprintw( dsp->wnd, dsp->cursor.y , dsp->cursor.x, "%02X", devMemory->memory[ ad ] );
+
+			dsp->cursor.x += 3;
+
+		}
+		dsp->cursor.y++;
+		
+	}
+
+	wrefresh( dsp->wnd );
+}
+
 //---------------------------------
 
 int main( int argc, char *argv[] ) {
@@ -147,7 +303,8 @@ int main( int argc, char *argv[] ) {
 	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) ResetInit );
 	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) MProcInit );
 	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) MemoryInit );
-
+	lfunct_accoda( &p_all_inits, (FN_VOID_VOID) Programma );
+	
 	p_ListFunct p_fList;
 	for ( p_fList = p_all_inits; p_fList != NULL; p_fList = p_fList->nList ) {
 		p_fList->fFunc();
@@ -168,8 +325,8 @@ int main( int argc, char *argv[] ) {
 	//	Callback task
 
 	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) all_wires_add_tick );
-	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devPower->task );
-	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devReset->task );
+//	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devPower->task );
+//	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devReset->task );
 	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devClock->task );
 	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devMProc->task );
 	lfunct_accoda( &p_all_tasks, (FN_VOID_VOID) devMemory->task );
@@ -180,12 +337,21 @@ int main( int argc, char *argv[] ) {
 	devMProc->mp_gate[ MP__CLOCK ]->Wire->visible 	= W_VISIBLE;
 	//devMProc->mp_gate[ MP_VCC ]->Wire->visible 		= W_VISIBLE;
 	//devMProc->mp_gate[ MP_GND ]->Wire->visible 		= W_VISIBLE;
-	//devMProc->mp_gate[ MP__RESET ]->Wire->visible 	= W_VISIBLE;
+	//devMProc->mp_gate[ MP__RESET ]->Wire->visible 	= W_VISIBLE;	
 	devMProc->mp_gate[ MP__M1 ]->Wire->visible 		= W_VISIBLE;
 	devMProc->mp_gate[ MP__MREQ ]->Wire->visible 	= W_VISIBLE;
 	devMProc->mp_gate[ MP__RD ]->Wire->visible 		= W_VISIBLE;
 	devMProc->mp_gate[ MP__WR ]->Wire->visible 		= W_VISIBLE;
-
+	
+	devMProc->mp_gate[ MP_Data_00 ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_Data_01 ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_Data_02 ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_Data_03 ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_Data_04 ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_Data_05 ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_Data_06 ]->Wire->visible 	= W_VISIBLE;
+	devMProc->mp_gate[ MP_Data_07 ]->Wire->visible 	= W_VISIBLE;
+	
 	//------------------------------------------------------------------------
 	//	Board
 
@@ -196,139 +362,24 @@ int main( int argc, char *argv[] ) {
 	//	Esecuzione procedure
 
 	while ( 1 ) {
-//		busShow( &pWindows->Bus );
-//		gatesShow( &pWindows->Gates );
-		
+
 		for ( p_fList = p_all_tasks; p_fList != NULL; p_fList = p_fList->nList ) {
 			p_fList->fFunc();
 		}
 
-//		sleepMs(1000);
+		mprocShow( &pWindows->MProc );
+#ifdef _C_CYGWIN
+		busShow( &pWindows->Bus );
+//		gatesShow( &pWindows->Gates );
+		memoryShow( &pWindows->Memory );
+#endif
+		
+		sleepMs(200);
 	}
-
-	wrefresh( pWindows->Bus.wnd );
 
 	//------------------------------------------------------------------------
 	//	FINE
 
-//	free(g0);
-//	free(g1);
-
 	return 0;
-
-/*
-
-	//Init();
-	//boardInit();
-
-	b_signals = new_bus( "SIGNALS", NULL );
-	w_reset = wire_new( "RESET", '\0' );
-	bus_add_wire( b_signals,  w_reset );
-	w_clock = wire_new( "CLOCK", '\0' );
-	bus_add_wire( b_signals,  w_clock );
-
-	g0 = gate_new( "G0", GATEMODE_OUTPUT, w_clock );
-	g1 = gate_new( "G1", GATEMODE_OUTPUT, w_clock );
-
-	sleepMs(1000);
-	busShow( &pWindows->Bus );
-
-	all_wires_add_tick();
-	task( w_clock );
-
-	sleepMs(1000);
-	busShow( &pWindows->Bus );
-
-	all_wires_add_tick();
-	task( w_clock );
-
-	sleepMs(1000);
-	busShow( &pWindows->Bus );
-
-	all_wires_add_tick();
-	task( w_clock );
-
-	sleepMs(1000);
-	busShow( &pWindows->Bus );
-
-	all_wires_add_tick();
-	task( w_clock );
-
-	sleepMs(1000);
-	busShow( &pWindows->Bus );
-
-	while ( 1 ) {
-		wrefresh( pWindows->Bus.wnd );
-	}
-*/
-/*
-	b_data = new_bus( "DATA", NULL );
-	bus_add_wire( b_data,  wire_new( "D0", '\0' ) );
-	bus_add_wire( b_data,  wire_new( "D1", '\0' ) );
-	bus_add_wire( b_data,  wire_new( "D2", '\0' ) );
-	bus_add_wire( b_data,  wire_new( "D3", '\0' ) );
-	bus_add_wire( b_data,  wire_new( "D4", '\0' ) );
-	bus_add_wire( b_data,  wire_new( "D5", '\0' ) );
-	bus_add_wire( b_data,  wire_new( "D6", '\0' ) );
-	bus_add_wire( b_data,  wire_new( "D7", '\0' ) );
-
-	b_address = new_bus( "ADDRESS", NULL );
-	bus_add_wire( b_address,  wire_new( "A00", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A01", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A02", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A03", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A04", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A05", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A06", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A07", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A08", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A09", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A10", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A11", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A12", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A13", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A14", '\0' ) );
-	bus_add_wire( b_address,  wire_new( "A15", '\0' ) );
-	
-	w0 = bus_get_wire( b_data, 		"D0" );
-	w1 = bus_get_wire( b_address, 	"A00" );
-	
-	wire_add_tick();
-	wire_add_tick();
-	wire_add_tick();
-	
-//	slist_del_last( w1->stato );
-	wire_del_last_tick();
-*/
-	
-/*	
-	w_d0 = bus_get_wire( b_data, "D3" );
-	wire_set_value( w_d0, '1' );
-	w_val = wire_get_value( w_d0 );
-	
-	w_d0->stato = slist_add( w_d0->stato );
-	wire_set_value( w_d0, '2' );
-
-	w_d0 = bus_get_wire( b_data, "D1" );
-	wire_add_set( w_d0, '1' );
-	wire_add_set( w_d0, '2' );
-*/
-	
-/*
-	Init();
-	
-	//------------------------------
-	
-	busDoReset();
-	busTick();
-	busTick();
-	busTick();
-	
-	busShow( &pWindows->Bus );
-	
-	while ( 1 ) {
-	
-	}
-*/	
 
 }

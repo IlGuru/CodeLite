@@ -5,9 +5,14 @@
 #include "board.h"
 
 struct s_Clock {
+	
+	//	DEVICE
+	p_device	dev;
+
 	char	counter;
 	p_wire 	w_clock;
 	p_gate 	g_clock;
+	
 	FN_VOID_VOID	task;
 };
 

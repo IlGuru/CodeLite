@@ -8,6 +8,7 @@
 #include "bit_oper.h"
 
 //-------------------------
+//	Prototipi
 
 typedef struct s_slist 	t_slist;
 typedef struct s_stato  t_stato;
@@ -29,6 +30,9 @@ typedef struct s_gate 	t_gate;
 typedef struct s_glist*	p_glist;
 typedef struct s_gate* 	p_gate;
 
+typedef struct s_device 	t_device;
+typedef struct s_device* 	p_device;
+
 //-------------------------
 
 typedef void (*FN_VOID_VOID)(void);
@@ -37,7 +41,7 @@ typedef void (*FN_VOID_VOID)(void);
 //	STATI
 
 #define STATO_ENTRIES_MIN	0
-#define STATO_ENTRIES_MAX	32
+#define STATO_ENTRIES_MAX	48
 
 #define STATO_VAL_MAX		1
 #define STATO_VAL_MIN		0
@@ -103,6 +107,7 @@ struct s_gate {
 	char		gate_mode;		//
 	char		pin;			//	Numero del pin nel package
 	p_wire		Wire;			//	Linea collegata
+	p_device	Device;			//	Dispositivo padre
 };
 
 struct s_glist {
@@ -132,7 +137,7 @@ struct s_bus {
 
 struct s_device {
 	char* 		nome;		//	Nome dispositivo
-	p_glist		p_gates;	//	Lista porte
+	p_glist		pGates;		//	Lista porte
 };
 
 //-------------------------
@@ -152,9 +157,10 @@ p_bus new_bus( char *nome, p_wire pWire );
 void *bus_add_wire( p_bus pBus,  p_wire pWire );
 
 
+
 void *glist_node_accoda( p_glist *gList, p_gate pGate );
 
-p_gate gate_new( char* nome, t_gatemode gatemode, char pin, p_wire pWire );
+p_gate gate_new( char* nome, p_device ParentDevice, t_gatemode gatemode, char pin, p_wire pWire );
 
 void *gate_connect( p_gate pGate, p_wire pWire );
 

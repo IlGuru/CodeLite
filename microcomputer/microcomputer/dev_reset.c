@@ -25,11 +25,22 @@ void *ResetTask() {
 void *ResetInit() {
 	devReset = malloc( sizeof(t_Reset) );
 
+	//	Device
+	devReset->dev			= malloc( sizeof( t_device ) );
+	devReset->dev->nome		= "RESET BTN";
+	devReset->dev->pGates	= NULL;
+	
+	//	Inizializzazione valori
+	
 	devReset->counter = 0;
+
+	//	GATES E WIRES
 
 	devReset->w_reset = wire_new( "_RESET", STATO_VAL_MAX );
 
-	devReset->g_reset = gate_new( "_RESET", GATEMODE_OUTPUT, 1, devReset->w_reset );
+	devReset->g_reset = gate_new( "_RESET", devReset->dev, 	GATEMODE_OUTPUT, 1, devReset->w_reset );
+
+	//	Callback
 
 	devReset->task = (FN_VOID_VOID)ResetTask;
 

@@ -39,6 +39,11 @@ void *PowerInit() {
 	
 	devPower = malloc( sizeof(t_Power) );
 
+	//	Device
+	devPower->dev			= malloc( sizeof( t_device ) );
+	devPower->dev->nome		= "POWER SUPPLY";
+	devPower->dev->pGates	= NULL;
+	
 	//	GATES E WIRES
 	
 	devPower->pGates = NULL;
@@ -46,8 +51,8 @@ void *PowerInit() {
 	devPower->pw_wire[ PW_GND ] = wire_new( "GND", 	STATO_VAL_MIN );
 	devPower->pw_wire[ PW_VCC ] = wire_new( "VCC", 	STATO_VAL_MAX );
 
-	devPower->pw_gate[ PW_GND ] = gate_new( "GND", 		GATEMODE_OUTPUT, 1, devPower->pw_wire[ PW_GND ] );
-	devPower->pw_gate[ PW_VCC ] = gate_new( "VCC", 		GATEMODE_OUTPUT, 2, devPower->pw_wire[ PW_VCC ] );
+	devPower->pw_gate[ PW_GND ] = gate_new( "GND", 		devPower->dev, 	GATEMODE_OUTPUT, 1, devPower->pw_wire[ PW_GND ] );
+	devPower->pw_gate[ PW_VCC ] = gate_new( "VCC", 		devPower->dev, 	GATEMODE_OUTPUT, 2, devPower->pw_wire[ PW_VCC ] );
 
 	for ( i=0; i<PW_NUM_PIN; i++) {
 		if ( devPower->pGates == NULL ) {								// devPower->pGates
@@ -62,6 +67,7 @@ void *PowerInit() {
 	}
 
 	//	Callback
+	
 	devPower->self_connect	= (FN_VOID_VOID)PowerSelfConnect;
 	devPower->task 			= (FN_VOID_VOID)PowerTask;
 

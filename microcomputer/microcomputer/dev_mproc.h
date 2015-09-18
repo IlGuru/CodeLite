@@ -77,48 +77,50 @@
 #define M_CYCLE_M3		5
 #define M_CYCLE_M4		6
 #define M_CYCLE_M5		7
+#define M_CYCLE_M6		8
 #define M_CYCLE_NEXT	253	//	Per indicare di passare al prossimo ciclo macchina
 #define M_CYCLE_END		254	//	Per indicare la fine di un' operazione
 
 #define M_CYCLE_NULL	254
 
-typedef void (*FN_OP_CODE)(void);
-
 struct s_MProc {
+
+	//	DEVICE
+	p_device	dev;
 
 	//	GATES
 	p_gate	mp_gate[MP_NUM_PIN];
 	p_wire	mp_wire[MP_NUM_PIN];
-	p_glist	pGates;
 
 	//	REGISTRI //	MP_MAIN_REG_SET, MP_ALT_REG_SET
 	dt_8bit		reg_A[2];		//	ACCUMULATORE
-	dt_8bit		reg_F[2];		//	FLAGS
 	dt_8bit		reg_B[2];	
 	dt_8bit		reg_C[2];
 	dt_8bit		reg_D[2];
 	dt_8bit		reg_E[2];
 	dt_8bit		reg_H[2];
 	dt_8bit		reg_L[2];
+	dt_8bit		reg_F[2];		//	FLAGS
 	dt_8bit		reg_I;			//	INTERRUPT PAGE ADDRESS REGISTER
 	dt_8bit		reg_R;			//	MEMORY REFRESH REGISTER
+	dt_16bit	reg_PC;			//	PROGRAM COUNTER
+	dt_16bit	reg_SP;			//	STACK POINTER
 	dt_16bit	reg_IX;			//	INDEX REGISTER
 	dt_16bit	reg_IY;			//	INDEX REGISTER
-	dt_16bit	reg_SP;			//	STACK POINTER
-	dt_16bit	reg_PC;			//	PROGRAM COUNTER
 
 	dt_8bit		IFF[2];			//	Interrupt Enable Flip Flop ( 1 e 2 )
 	
-	dt_8bit		*pR;			//	Memorizzo l'indirizzo di memoria dei registri da utilizzare durante la cedodifica dell' OPCODE ecc (Puntatore a registri)
-	dt_8bit		*pR1;			//	Memorizzo l'indirizzo di memoria dei registri da utilizzare durante la cedodifica dell' OPCODE ecc (Puntatore a registri)
-	dt_16bit	pA;				//	Memorizzo un valore a 16 bit
-	
-	dt_8bit		t_cycle;
-	dt_8bit     m_cycle;
-	FN_OP_CODE	f_op_code;			//	funzione che implementa l'operazione corrispondente all' op-code da eseguire
+	unsigned char	t_cycle;
+	unsigned char	m_cycle;
+	p_op_code		op;
+//	dt_8bit			op_code;
+//	dt_8bit		*pR;			//	Memorizzo l'indirizzo di memoria dei registri da utilizzare durante la cedodifica dell' OPCODE ecc (Puntatore a registri)
+//	dt_8bit		*pR1;			//	Memorizzo l'indirizzo di memoria dei registri da utilizzare durante la cedodifica dell' OPCODE ecc (Puntatore a registri)
+//	dt_16bit	pA;				//	Memorizzo un valore a 16 bit
+//	FN_OP_CODE	f_op_code;			//	funzione che implementa l'operazione corrispondente all' op-code da eseguire
 	
 	dt_8bit		n_reset_down_clock;	//	Numero di impulsi di clock con reset basso
-	dt_8bit       int_stat;			//	Interrupt status ( Mode0, ... )
+	dt_8bit     int_stat;			//	Interrupt status ( Mode0, ... )
 	
 	//	Callback
 	FN_VOID_VOID		self_connect;

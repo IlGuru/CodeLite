@@ -2,6 +2,18 @@
 
 //---------------------------------
 
+static void * _reset_op_code( p_op_code op ) {
+	devMProc->op->code		= 0;
+	devMProc->op->oper_1	= 0;
+	devMProc->op->oper_2	= 0;
+	devMProc->op->pR		= NULL;
+	devMProc->op->pR1		= NULL;
+	devMProc->op->pA		= 0;	
+	devMProc->op->f_op_code	= NULL;	
+
+	return NULL;
+}
+
 static void * _set_addr_bus( dt_16bit *pAddress ) {
  	gate_set_val( devMProc->mp_gate[ MP_Address_00 ], ( TSTBIT( *pAddress,  0 ) ? STATO_VAL_MAX : STATO_VAL_MIN ) );
  	gate_set_val( devMProc->mp_gate[ MP_Address_01 ], ( TSTBIT( *pAddress,  1 ) ? STATO_VAL_MAX : STATO_VAL_MIN ) );
@@ -115,14 +127,19 @@ static void * _check_reset() {
 
 static void * _fetch( dt_8bit	*pRStore ) {	//	4 T CYCLE
 
-	//	*pRStore indirizzo di memoria dove inserire il valore letto durante il fetch ( es &devMProc->reg_I ) 
+	//	*pRStore indirizzo di memoria dove inserire il valore letto durante il fetch ( es &devMProc->op->code ) 
 	
 	switch ( devMProc->t_cycle ) {
 		
-		case T_CYCLE_T1:	//	Fronte di salita di T1
-		
-			devMProc->f_op_code	= NULL;	//	Magari non è il posto migliore per azzerare la funzione, ma qui è sicuramente prima della lettura dell' op code e della successiva decodifica
+		case T_CYCLE_START:
 
+			//	Magari non è il posto migliore per azzerare op_code e la funzione, ma qui è sicuramente prima della lettura dell' op code e della successiva decodifica
+			_reset_op_code( devMProc->op );
+
+			break;
+			
+		case T_CYCLE_T1:	//	Fronte di salita di T1
+			
 			gate_set_val( devMProc->mp_gate[ MP__M1 ], 		STATO_VAL_MIN );
 			_set_addr_bus( &devMProc->reg_PC );
 			
@@ -209,7 +226,7 @@ static void * _fetch( dt_8bit	*pRStore ) {	//	4 T CYCLE
 
 static void * _mem_read( dt_16bit *pAddress, dt_8bit* pRStore ) {	//	3 T CYCLE
 
-	//	*pRStore indirizzo di memoria dove inserire il valore letto durante il fetch ( es &devMProc->reg_I ) 
+	//	*pRStore indirizzo di memoria dove inserire il valore letto durante il fetch ( es &devMProc->op->code ) 
 	
 	switch ( devMProc->t_cycle ) {
 		
@@ -272,7 +289,7 @@ static void * _mem_read( dt_16bit *pAddress, dt_8bit* pRStore ) {	//	3 T CYCLE
 
 static void * _mem_write( dt_16bit *pAddress, dt_8bit* pRStore ) {	//	3 T CYCLE
 
-	//	*pRStore indirizzo di memoria dove inserire il valore letto durante il fetch ( es &devMProc->reg_I ) 
+	//	*pRStore indirizzo di memoria dove inserire il valore letto durante il fetch ( es &devMProc->op->code ) 
 	
 	switch ( devMProc->t_cycle ) {
 		
@@ -343,107 +360,63 @@ static void * _mem_write( dt_16bit *pAddress, dt_8bit* pRStore ) {	//	3 T CYCLE
 	
 }
 
+dt_8bit* _get_reg( dt_8bit reg_op_code ) {
+	switch ( reg_op_code ) {
+		case 0b00000000:
+			return &devMProc->reg_B[0];
+			break;
+		case 0b00000001:
+			return &devMProc->reg_C[0];
+			break;
+		case 0b00000010:
+			return &devMProc->reg_D[0];
+			break;
+		case 0b00000011:
+			return &devMProc->reg_E[0];
+			break;
+		case 0b00000100:
+			return &devMProc->reg_H[0];
+			break;
+		case 0b00000101:
+			return &devMProc->reg_L[0];
+			break;
+		case 0b00000110:
+			break;
+		case 0b00000111:
+			return &devMProc->reg_A[0];
+			break;
+	}
+	
+	return NULL;
+}
+
+FN_OP_CODE _op_nop() {
+	devMProc->t_cycle	= T_CYCLE_START;
+	devMProc->m_cycle 	= M_CYCLE_END;
+	return NULL;
+}	
 FN_OP_CODE _op_ld_r_r() {
 
-	dt_8bit	r	= 0;
-	
 	if ( devMProc->m_cycle == M_CYCLE_EXECUTE || devMProc->m_cycle == M_CYCLE_M1 ) {
-		r = devMProc->reg_I & 0b00000111;
-		switch ( r ) {
-			case 0b00000000:
-				devMProc->pR1 = &devMProc->reg_B[0];
-				break;
-			case 0b00000001:
-				devMProc->pR1 = &devMProc->reg_C[0];
-				break;
-			case 0b00000010:
-				devMProc->pR1 = &devMProc->reg_D[0];
-				break;
-			case 0b00000011:
-				devMProc->pR1 = &devMProc->reg_E[0];
-				break;
-			case 0b00000100:
-				devMProc->pR1 = &devMProc->reg_H[0];
-				break;
-			case 0b00000101:
-				devMProc->pR1 = &devMProc->reg_L[0];
-				break;
-			case 0b00000110:
-				break;
-			case 0b00000111:
-				devMProc->pR1 = &devMProc->reg_A[0];
-				break;
-		}
-		
-		r = ( devMProc->reg_I & 0b00111000 ) >> 3;
-		switch ( r ) {
-			case 0b00000000:
-				devMProc->pR = &devMProc->reg_B[0];
-				break;
-			case 0b00000001:
-				devMProc->pR = &devMProc->reg_C[0];
-				break;
-			case 0b00000010:
-				devMProc->pR = &devMProc->reg_D[0];
-				break;
-			case 0b00000011:
-				devMProc->pR = &devMProc->reg_E[0];
-				break;
-			case 0b00000100:
-				devMProc->pR = &devMProc->reg_H[0];
-				break;
-			case 0b00000101:
-				devMProc->pR = &devMProc->reg_L[0];
-				break;
-			case 0b00000110:
-				break;
-			case 0b00000111:
-				devMProc->pR = &devMProc->reg_A[0];
-				break;
-		}
 
-		*devMProc->pR 		= *devMProc->pR1;
+		devMProc->op->pR1	= _get_reg( devMProc->op->code & 0b00000111 );
+		devMProc->op->pR 	= _get_reg( ( devMProc->op->code & 0b00111000 ) >> 3 );
+		*devMProc->op->pR 	= *devMProc->op->pR1;
 
 		devMProc->t_cycle	= T_CYCLE_START;
 		devMProc->m_cycle 	= M_CYCLE_END;
-
 		return NULL;
 	}
 	
+	devMProc->t_cycle		= T_CYCLE_START;
+	devMProc->m_cycle 		= M_CYCLE_END;
 	return NULL;
 		
 }
 FN_OP_CODE _op_ld_r_n() {
 
-	dt_8bit	r	= 0;
-	
 	if ( devMProc->m_cycle == M_CYCLE_EXECUTE || devMProc->m_cycle == M_CYCLE_M1 ) {
-		r = ( devMProc->reg_I & 0b00111000 ) >> 3;
-		switch ( r ) {
-			case 0b00000000:
-				devMProc->pR = &devMProc->reg_B[0];
-				break;
-			case 0b00000001:
-				devMProc->pR = &devMProc->reg_C[0];
-				break;
-			case 0b00000010:
-				devMProc->pR = &devMProc->reg_D[0];
-				break;
-			case 0b00000011:
-				devMProc->pR = &devMProc->reg_E[0];
-				break;
-			case 0b00000100:
-				devMProc->pR = &devMProc->reg_H[0];
-				break;
-			case 0b00000101:
-				devMProc->pR = &devMProc->reg_L[0];
-				break;
-			case 0b00000110:
-				break;
-			case 0b00000111:
-				devMProc->pR = &devMProc->reg_A[0];
-				break;
-		}
+		devMProc->op->pR	= _get_reg( ( devMProc->op->code & 0b00111000 ) >> 3 );
 		
 		devMProc->t_cycle		= T_CYCLE_START;
 		devMProc->m_cycle 		= M_CYCLE_NEXT;
@@ -452,7 +425,7 @@ FN_OP_CODE _op_ld_r_n() {
 	}
 	if ( devMProc->m_cycle == M_CYCLE_M2 ) {
 		
-		_mem_read( &devMProc->reg_PC, devMProc->pR );
+		_mem_read( &devMProc->reg_PC, devMProc->op->pR );
 		
 		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
 			devMProc->reg_PC++;
@@ -463,45 +436,20 @@ FN_OP_CODE _op_ld_r_n() {
 		return NULL;
 	}	
 
+	devMProc->t_cycle		= T_CYCLE_START;
+	devMProc->m_cycle 		= M_CYCLE_END;
 	return NULL;
 		
 }
 FN_OP_CODE _op_ld_r_hl() {
 
-	dt_8bit		r = 0;
-	
 	if ( devMProc->m_cycle == M_CYCLE_EXECUTE || devMProc->m_cycle == M_CYCLE_M1 ) {
-		r = ( devMProc->reg_I & 0b00111000 ) >> 3;
-		switch ( r ) {
-			case 0b00000000:
-				devMProc->pR = &devMProc->reg_B[0];
-				break;
-			case 0b00000001:
-				devMProc->pR = &devMProc->reg_C[0];
-				break;
-			case 0b00000010:
-				devMProc->pR = &devMProc->reg_D[0];
-				break;
-			case 0b00000011:
-				devMProc->pR = &devMProc->reg_E[0];
-				break;
-			case 0b00000100:
-				devMProc->pR = &devMProc->reg_H[0];
-				break;
-			case 0b00000101:
-				devMProc->pR = &devMProc->reg_L[0];
-				break;
-			case 0b00000110:
-				break;
-			case 0b00000111:
-				devMProc->pR = &devMProc->reg_A[0];
-				break;
-		}
+		devMProc->op->pR	= _get_reg( ( devMProc->op->code & 0b00111000 ) >> 3 );
 		
-		devMProc->pA		= 0;
-		devMProc->pA		|= devMProc->reg_H[0];
-		devMProc->pA		<<= 8;
-		devMProc->pA		|= devMProc->reg_L[0];
+		devMProc->op->pA	= 0;
+		devMProc->op->pA	|= devMProc->reg_H[0];
+		devMProc->op->pA	<<= 8;
+		devMProc->op->pA	|= devMProc->reg_L[0];
 		
 		devMProc->t_cycle	= T_CYCLE_START;
 		devMProc->m_cycle 	= M_CYCLE_NEXT;
@@ -510,7 +458,7 @@ FN_OP_CODE _op_ld_r_hl() {
 	}
 	if ( devMProc->m_cycle == M_CYCLE_M2 ) {
 		
-		_mem_read( &devMProc->pA, devMProc->pR );
+		_mem_read( &devMProc->op->pA, devMProc->op->pR );
 		
 		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
 			devMProc->reg_PC++;
@@ -521,26 +469,344 @@ FN_OP_CODE _op_ld_r_hl() {
 		return NULL;
 	}	
 
+	devMProc->t_cycle		= T_CYCLE_START;
+	devMProc->m_cycle 		= M_CYCLE_END;
+	return NULL;
+		
+}
+FN_OP_CODE _op_ld_dd() {
+
+	if ( devMProc->m_cycle == M_CYCLE_EXECUTE || devMProc->m_cycle == M_CYCLE_M1 ) {
+		
+		//	FINE DEL CICLO DI FETCH
+		devMProc->t_cycle	= T_CYCLE_START;
+		devMProc->m_cycle 	= M_CYCLE_NEXT;
+		
+		return NULL;
+	}
+	if ( devMProc->m_cycle == M_CYCLE_M2 ) {
+		
+		_mem_read( &devMProc->reg_PC, &devMProc->op->oper_1 );
+		
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->reg_PC++;
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}	
+	if ( devMProc->m_cycle == M_CYCLE_M3 ) {
+		
+		//	LD r, (IX+d)
+		if ( devMProc->op->code == 0xDD && ( (devMProc->op->oper_1 & 0b11000111)==0b01000110 ) ) {
+			_mem_read( &devMProc->reg_PC, &devMProc->op->oper_2 );
+		}
+		//	LD (IX+d), r
+		if ( devMProc->op->code == 0xDD && ( (devMProc->op->oper_1 & 0b11111000)==0b01110000 ) ) {
+			_mem_read( &devMProc->reg_PC, &devMProc->op->oper_2 );
+		}
+		
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->reg_PC++;
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}	
+	if ( devMProc->m_cycle == M_CYCLE_M4 ) {
+		
+		//	LD r, (IX+d)
+		if ( devMProc->op->code == 0xDD && ( (devMProc->op->oper_1 & 0b11000111)==0b01000110 ) ) {
+			devMProc->op->pR = _get_reg( ( devMProc->op->oper_1 & 0b00111000 ) >> 3 );
+
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+			return NULL;
+		}
+		//	LD (IX+d), r
+		if ( devMProc->op->code == 0xDD && ( (devMProc->op->oper_1 & 0b11111000)==0b01110000 ) ) {
+			devMProc->op->pR = _get_reg( devMProc->op->oper_1 & 0b00000111 );
+
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+			return NULL;
+		}
+		
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}	
+	if ( devMProc->m_cycle == M_CYCLE_M5 ) {
+		
+		//	LD r, (IX+d)
+		if ( devMProc->op->code == 0xDD && ( (devMProc->op->oper_1 & 0b11000111)==0b01000110 ) ) {
+			
+			devMProc->op->pA = devMProc->reg_IX + devMProc->op->oper_2;	//	TO_DO Complemento a 2
+			_mem_read( &devMProc->op->pA, devMProc->op->pR );
+			
+			if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+				devMProc->t_cycle		= T_CYCLE_START;
+				devMProc->m_cycle 		= M_CYCLE_END;
+				return NULL;
+			}
+			
+		}
+		//	LD (IX+d), r
+		if ( devMProc->op->code == 0xDD && ( (devMProc->op->oper_1 & 0b11111000)==0b01110000 ) ) {
+			
+			devMProc->op->pA = devMProc->reg_IX + devMProc->op->oper_2;	//	TO_DO Complemento a 2
+			_mem_write( &devMProc->op->pA, devMProc->op->pR );
+			
+			if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+				devMProc->t_cycle		= T_CYCLE_START;
+				devMProc->m_cycle 		= M_CYCLE_END;
+				return NULL;
+			}
+			
+		}
+
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_END;
+		}
+
+		return NULL;
+	}	
+
+	devMProc->t_cycle		= T_CYCLE_START;
+	devMProc->m_cycle 		= M_CYCLE_END;
+	return NULL;
+		
+}
+FN_OP_CODE _op_ld_fd() {
+
+	if ( devMProc->m_cycle == M_CYCLE_EXECUTE || devMProc->m_cycle == M_CYCLE_M1 ) {
+		
+		//	FINE DEL CICLO DI FETCH
+		devMProc->t_cycle	= T_CYCLE_START;
+		devMProc->m_cycle 	= M_CYCLE_NEXT;
+		
+		return NULL;
+	}
+	if ( devMProc->m_cycle == M_CYCLE_M2 ) {
+		
+		_mem_read( &devMProc->reg_PC, &devMProc->op->oper_1 );
+		
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->reg_PC++;
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}	
+	if ( devMProc->m_cycle == M_CYCLE_M3 ) {
+		
+		//	LD r, (IX+d)
+		if ( devMProc->op->code == 0xFD && ( (devMProc->op->oper_1 & 0b11000111)==0b01000110 ) ) {
+			_mem_read( &devMProc->reg_PC, &devMProc->op->oper_2 );
+		}
+		//	LD (IY+d), r
+		if ( devMProc->op->code == 0xFD && ( (devMProc->op->oper_1 & 0b11111000)==0b01110000 ) ) {
+			_mem_read( &devMProc->reg_PC, &devMProc->op->oper_2 );
+		}
+		
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->reg_PC++;
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}	
+	if ( devMProc->m_cycle == M_CYCLE_M4 ) {
+		
+		//	LD r, (IY+d)
+		if ( devMProc->op->code == 0xFD && ( (devMProc->op->oper_1 & 0b11000111)==0b01000110 ) ) {
+			devMProc->op->pR = _get_reg( ( devMProc->op->oper_1 & 0b00111000 ) >> 3 );
+
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+			return NULL;
+		}
+		//	LD (IY+d), r
+		if ( devMProc->op->code == 0xFD && ( (devMProc->op->oper_1 & 0b11111000)==0b01110000 ) ) {
+			devMProc->op->pR = _get_reg( devMProc->op->oper_1 & 0b00000111 );
+
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+			return NULL;
+		}
+		
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}	
+	if ( devMProc->m_cycle == M_CYCLE_M5 ) {
+		
+		//	LD r, (IX+d)
+		if ( devMProc->op->code == 0xFD && ( (devMProc->op->oper_1 & 0b11000111)==0b01000110 ) ) {
+			
+			devMProc->op->pA = devMProc->reg_IY + devMProc->op->oper_2;	//	TO_DO Complemento a 2
+			_mem_read( &devMProc->op->pA, devMProc->op->pR );
+			
+			if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+				devMProc->t_cycle		= T_CYCLE_START;
+				devMProc->m_cycle 		= M_CYCLE_END;
+				return NULL;
+			}
+			
+		}
+		//	LD (IY+d), r
+		if ( devMProc->op->code == 0xFD && ( (devMProc->op->oper_1 & 0b11111000)==0b01110000 ) ) {
+			
+			devMProc->op->pA = devMProc->reg_IY + devMProc->op->oper_2;	//	TO_DO Complemento a 2
+			_mem_write( &devMProc->op->pA, devMProc->op->pR );
+			
+			if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+				devMProc->t_cycle		= T_CYCLE_START;
+				devMProc->m_cycle 		= M_CYCLE_END;
+				return NULL;
+			}
+			
+		}
+
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_END;
+		}
+
+		return NULL;
+	}	
+
+	devMProc->t_cycle		= T_CYCLE_START;
+	devMProc->m_cycle 		= M_CYCLE_END;
+	return NULL;
+		
+}
+FN_OP_CODE _op_ld_hl_r() {
+
+	if ( devMProc->m_cycle == M_CYCLE_EXECUTE || devMProc->m_cycle == M_CYCLE_M1 ) {
+		devMProc->op->pR	= _get_reg( devMProc->op->code & 0b00000111 );
+		
+		devMProc->op->pA	= 0;
+		devMProc->op->pA	|= devMProc->reg_H[0];
+		devMProc->op->pA	<<= 8;
+		devMProc->op->pA	|= devMProc->reg_L[0];
+		
+		devMProc->t_cycle	= T_CYCLE_START;
+		devMProc->m_cycle 	= M_CYCLE_NEXT;
+		
+		return NULL;
+	}
+	if ( devMProc->m_cycle == M_CYCLE_M2 ) {
+		
+		_mem_write( &devMProc->op->pA, devMProc->op->pR );
+		
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_END;
+		}
+
+		return NULL;
+	}	
+
+	devMProc->t_cycle		= T_CYCLE_START;
+	devMProc->m_cycle 		= M_CYCLE_END;
+	return NULL;
+		
+}
+FN_OP_CODE _op_ld_hl_n() {
+
+	if ( devMProc->m_cycle == M_CYCLE_EXECUTE || devMProc->m_cycle == M_CYCLE_M1 ) {
+		
+		devMProc->op->pA	= 0;
+		devMProc->op->pA	|= devMProc->reg_H[0];
+		devMProc->op->pA	<<= 8;
+		devMProc->op->pA	|= devMProc->reg_L[0];
+		
+		devMProc->t_cycle	= T_CYCLE_START;
+		devMProc->m_cycle 	= M_CYCLE_NEXT;
+		
+		return NULL;
+	}
+	if ( devMProc->m_cycle == M_CYCLE_M2 ) {
+		
+		_mem_read( &devMProc->reg_PC, &devMProc->op->oper_1 );
+		
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->reg_PC++;
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_NEXT;
+		}
+
+		return NULL;
+	}	
+
+	if ( devMProc->m_cycle == M_CYCLE_M3 ) {
+		
+		_mem_write( &devMProc->op->pA, &devMProc->op->oper_1 );
+		
+		if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+			devMProc->t_cycle		= T_CYCLE_START;
+			devMProc->m_cycle 		= M_CYCLE_END;
+		}
+
+		return NULL;
+	}	
+
+	devMProc->t_cycle		= T_CYCLE_START;
+	devMProc->m_cycle 		= M_CYCLE_END;
 	return NULL;
 		
 }
 
 static void * _decode() {
 	
-	
-	if ( ( ( devMProc->reg_I & OP_AM_LD_R_R ) == OP_EM_LD_R_R ) && OP_EXCLUDE_RES_R( devMProc->reg_I ) && OP_EXCLUDE_RES_R1( devMProc->reg_I ) ) {
-		//	01rrrRRR
-		//	Non esiste un registro con opdoce 110 quindi l'op code di ld_r_r non può contenere questo codice per r o r1
-		devMProc->f_op_code = (FN_OP_CODE) _op_ld_r_r;
+	//	Default
+	devMProc->op->f_op_code = (FN_OP_CODE) _op_nop;
+
+	if ( ( ( devMProc->op->code & OP_AM_NOP ) == OP_EM_NOP ) ) {
+		devMProc->op->f_op_code = (FN_OP_CODE) _op_nop;
 	}
-	if ( ( ( devMProc->reg_I & OP_AM_LD_R_N ) == OP_EM_LD_R_N ) && OP_EXCLUDE_RES_R( devMProc->reg_I ) ) {
+	
+	//	01rrrRRR
+	if ( ( ( devMProc->op->code & OP_AM_LD_R_R ) == OP_EM_LD_R_R ) && OP_EXCLUDE_RES_R( devMProc->op->code ) && OP_EXCLUDE_RES_R1( devMProc->op->code ) ) {
+		//	Non esiste un registro con opdoce 110 quindi l'op code di ld_r_r non può contenere questo codice per r o r1
+		devMProc->op->f_op_code = (FN_OP_CODE) _op_ld_r_r;
+	}
+	if ( ( ( devMProc->op->code & OP_AM_LD_R_N ) == OP_EM_LD_R_N ) && OP_EXCLUDE_RES_R( devMProc->op->code ) ) {
 		//	00rrr110
 		//	Non esiste un registro con opdoce 110 quindi l'op code di ld_r_N non può contenere questo codice per r
-		devMProc->f_op_code = (FN_OP_CODE) _op_ld_r_n;
+		devMProc->op->f_op_code = (FN_OP_CODE) _op_ld_r_n;
 	}
-	if ( ( ( devMProc->reg_I & OP_AM_LD_R_HL ) == OP_EM_LD_R_HL ) && OP_EXCLUDE_RES_R( devMProc->reg_I ) ) {
-		//	01rrr110
-		devMProc->f_op_code = (FN_OP_CODE) _op_ld_r_hl;
+	//	01rrr110
+	if ( ( ( devMProc->op->code & OP_AM_LD_R_HL ) == OP_EM_LD_R_HL ) && OP_EXCLUDE_RES_R( devMProc->op->code ) ) {
+		devMProc->op->f_op_code = (FN_OP_CODE) _op_ld_r_hl;
+	}
+	//	11011101	->	LD r, (IX+d) ; LD (IX+d), r
+	if ( ( ( devMProc->op->code & OP_AM_LD_DD ) == OP_EM_LD_DD ) ) {
+		devMProc->op->f_op_code = (FN_OP_CODE) _op_ld_dd;
+	}
+	//	11111101	->	LD r, (IY+d) ;  LD (IY+d), r
+	if ( ( ( devMProc->op->code & OP_AM_LD_FD ) == OP_EM_LD_FD ) ) {
+		devMProc->op->f_op_code = (FN_OP_CODE) _op_ld_fd;
+	}
+	//	01110rrr	->	_op_ld_hl_r, 
+	if ( ( ( devMProc->op->code & OP_AM_LD_HL_R ) == OP_EM_LD_HL_R ) && OP_EXCLUDE_RES_R1( devMProc->op->code ) ) {
+		devMProc->op->f_op_code = (FN_OP_CODE) _op_ld_hl_r;
+	}
+	//	LD (HL), n
+	if ( ( devMProc->op->code & OP_AM_LD_HL_N ) == OP_EM_LD_HL_N ) {
+		devMProc->op->f_op_code = (FN_OP_CODE) _op_ld_hl_n;
 	}
 	
 	devMProc->t_cycle		= T_CYCLE_T1;
@@ -577,7 +843,7 @@ void *MProcTask() {
 
 			if ( devMProc->m_cycle == M_CYCLE_FETCH ) {														//	Ci si arriva solo tramite RESET o tramite M_CYCLE_END
 				
-				_fetch( &devMProc->reg_I );
+				_fetch( &devMProc->op->code );
 				
 				if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
 					devMProc->m_cycle = M_CYCLE_DECODE;
@@ -599,7 +865,7 @@ void *MProcTask() {
 			}
 			
 			if ( devMProc->m_cycle == M_CYCLE_EXECUTE || devMProc->m_cycle == M_CYCLE_M1 ) {				//	Ci si arriva solo tramite M_CYCLE_DECODE
-				devMProc->f_op_code();
+				devMProc->op->f_op_code();
 				if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
 					devMProc->m_cycle = M_CYCLE_M2;
 					return NULL;
@@ -608,7 +874,7 @@ void *MProcTask() {
 					return NULL;
 			}
 			if ( devMProc->m_cycle == M_CYCLE_M2 ) {
-				devMProc->f_op_code();
+				devMProc->op->f_op_code();
 				if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
 					devMProc->m_cycle = M_CYCLE_M3;
 					return NULL;
@@ -617,7 +883,7 @@ void *MProcTask() {
 					return NULL;
 			}
 			if ( devMProc->m_cycle == M_CYCLE_M3 ) {
-				devMProc->f_op_code();
+				devMProc->op->f_op_code();
 				if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
 					devMProc->m_cycle = M_CYCLE_M4;
 					return NULL;
@@ -626,7 +892,7 @@ void *MProcTask() {
 					return NULL;
 			}
 			if ( devMProc->m_cycle == M_CYCLE_M4 ) {
-				devMProc->f_op_code();
+				devMProc->op->f_op_code();
 				if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
 					devMProc->m_cycle = M_CYCLE_M5;
 					return NULL;
@@ -634,6 +900,16 @@ void *MProcTask() {
 				if ( devMProc->m_cycle != M_CYCLE_END )
 					return NULL;
 			}
+			if ( devMProc->m_cycle == M_CYCLE_M5 ) {
+				devMProc->op->f_op_code();
+				if ( devMProc->m_cycle == M_CYCLE_NEXT ) {
+					devMProc->m_cycle = M_CYCLE_M6;
+					return NULL;
+				}
+				if ( devMProc->m_cycle != M_CYCLE_END )
+					return NULL;
+			}
+			
 			
 			if ( devMProc->m_cycle == M_CYCLE_END ) {														//	Ci si arriva solo tramite la fine di un' operazione op code
 				devMProc->t_cycle		= T_CYCLE_START;
@@ -659,7 +935,7 @@ void *MProcSelfConnect() {
 	p_wire	pWire	= NULL;
 	p_wlist	pWList	= NULL;
 
-	for ( pGList = devMProc->pGates; pGList != NULL; pGList = pGList->g_next ) {
+	for ( pGList = devMProc->dev->pGates; pGList != NULL; pGList = pGList->g_next ) {
 		pGate = pGList->Gate;
 
 		for ( pWList = p_all_wires; pGate->Wire == NULL && pWList != NULL; pWList = pWList->w_next ) {
@@ -682,24 +958,29 @@ void *MProcInit() {
 	
 	devMProc = malloc( sizeof(t_MProc) );
 
+	//	Device
+	devMProc->dev			= malloc( sizeof( t_device ) );
+	devMProc->dev->nome		= "Z80 CPU";
+	devMProc->dev->pGates	= NULL;
+	
+	//	Inizializzazione valori
+	
 	devMProc->n_reset_down_clock 		= 0;
 	
+	//		OpCode
 	devMProc->t_cycle					= T_CYCLE_START;
 	devMProc->m_cycle					= M_CYCLE_FETCH;
+	devMProc->op						= malloc( sizeof( t_op_code ) );
+	_reset_op_code( devMProc->op );
 	
-	devMProc->f_op_code					= NULL;
-	
-	devMProc->pR						= NULL;		//	Puntatori a indirizzi di memoria dei registri da usare nella decode degli op code
-	devMProc->pR1						= NULL;		//	Puntatori a indirizzi di memoria dei registri da usare nella decode degli op code
-	devMProc->pA						= 0;		//	Puntatore ad un valore a 16 bit ( Indirizzo di mem ) 
-	
-	devMProc->reg_A[ MP_MAIN_REG_SET ] = 0;	//
+	//		Registri
+	devMProc->reg_A[ MP_MAIN_REG_SET ] = 0;
 	devMProc->reg_A[ MP_ALTE_REG_SET ] = 0;
 	devMProc->reg_F[ MP_MAIN_REG_SET ] = 0;
 	devMProc->reg_F[ MP_ALTE_REG_SET ] = 0;
-	devMProc->reg_B[ MP_MAIN_REG_SET ] = 0;	//
+	devMProc->reg_B[ MP_MAIN_REG_SET ] = 0;
 	devMProc->reg_B[ MP_ALTE_REG_SET ] = 0;
-	devMProc->reg_C[ MP_MAIN_REG_SET ] = 0;	//
+	devMProc->reg_C[ MP_MAIN_REG_SET ] = 0;
 	devMProc->reg_C[ MP_ALTE_REG_SET ] = 0;
 	devMProc->reg_D[ MP_MAIN_REG_SET ] = 0;
 	devMProc->reg_D[ MP_ALTE_REG_SET ] = 0;
@@ -717,9 +998,7 @@ void *MProcInit() {
 	devMProc->reg_PC                   = 0;
 
 	//	GATES E WIRES
-	
-	devMProc->pGates = NULL;
-	
+
 	//devMProc->mp_wire[ _CLOCK        ] = wire_new( "_CLOCK",	STATO_VAL_MAX );
 	//devMProc->mp_wire[ VCC           ] = wire_new( "VCC",	    STATO_VAL_MAX );
 	//devMProc->mp_wire[ GND           ] = wire_new( "GND",	    STATO_VAL_MIN );
@@ -761,53 +1040,53 @@ void *MProcInit() {
 	devMProc->mp_wire[ MP_Data_06    ] = wire_new( "D6", 		STATO_VAL_MIN );
 	devMProc->mp_wire[ MP_Data_07    ] = wire_new( "D7", 		STATO_VAL_MIN );
 
-	devMProc->mp_gate[ MP__CLOCK     ] = gate_new( "_CLOCK", 	GATEMODE_INPUT,	  6, NULL                               );	// Wires esterni
-	devMProc->mp_gate[ MP_VCC        ] = gate_new( "VCC", 		GATEMODE_INPUT,	 11, NULL                               );	// Wires esterni
-	devMProc->mp_gate[ MP_GND        ] = gate_new( "GND", 		GATEMODE_INPUT,  29, NULL                               );	// Wires esterni
-	devMProc->mp_gate[ MP__M1        ] = gate_new( "_M1", 		GATEMODE_OUTPUT, 17, devMProc->mp_wire[ MP__M1        ] );
-	devMProc->mp_gate[ MP__MREQ      ] = gate_new( "_MREQ", 	GATEMODE_OUTPUT, 19, devMProc->mp_wire[ MP__MREQ      ] );
-	devMProc->mp_gate[ MP__IORQ      ] = gate_new( "_IORQ", 	GATEMODE_OUTPUT, 20, devMProc->mp_wire[ MP__IORQ      ] );
-	devMProc->mp_gate[ MP__RD        ] = gate_new( "_RD", 		GATEMODE_OUTPUT, 21, devMProc->mp_wire[ MP__RD        ] );
-	devMProc->mp_gate[ MP__WR        ] = gate_new( "_WR", 		GATEMODE_OUTPUT, 22, devMProc->mp_wire[ MP__WR        ] );
-	devMProc->mp_gate[ MP__RFSH      ] = gate_new( "_RFSH", 	GATEMODE_OUTPUT, 28, devMProc->mp_wire[ MP__RFSH      ] );
-	devMProc->mp_gate[ MP__HALT      ] = gate_new( "_HALT", 	GATEMODE_OUTPUT, 18, devMProc->mp_wire[ MP__HALT      ] );
-	devMProc->mp_gate[ MP__WAIT      ] = gate_new( "_WAIT", 	GATEMODE_INPUT,  24, devMProc->mp_wire[ MP__WAIT      ] );
-	devMProc->mp_gate[ MP__INT       ] = gate_new( "_INT", 		GATEMODE_INPUT,  16, devMProc->mp_wire[ MP__INT       ] );
-	devMProc->mp_gate[ MP__NMI       ] = gate_new( "_NMI", 		GATEMODE_INPUT,  17, devMProc->mp_wire[ MP__NMI       ] );
-	devMProc->mp_gate[ MP__RESET     ] = gate_new( "_RESET", 	GATEMODE_INPUT,  26, NULL                               );	// Wires esterni
-	devMProc->mp_gate[ MP__BUSRQ     ] = gate_new( "_BUSRQ", 	GATEMODE_INPUT,  25, devMProc->mp_wire[ MP__BUSRQ     ] );
-	devMProc->mp_gate[ MP__BUSACK    ] = gate_new( "_BUSACK", 	GATEMODE_OUTPUT, 23, devMProc->mp_wire[ MP__BUSACK    ] );
-	devMProc->mp_gate[ MP_Address_00 ] = gate_new( "A00", 		GATEMODE_OUTPUT, 30, devMProc->mp_wire[ MP_Address_00 ] );
-	devMProc->mp_gate[ MP_Address_01 ] = gate_new( "A01", 		GATEMODE_OUTPUT, 31, devMProc->mp_wire[ MP_Address_01 ] );
-	devMProc->mp_gate[ MP_Address_02 ] = gate_new( "A02", 		GATEMODE_OUTPUT, 32, devMProc->mp_wire[ MP_Address_02 ] );
-	devMProc->mp_gate[ MP_Address_03 ] = gate_new( "A03", 		GATEMODE_OUTPUT, 33, devMProc->mp_wire[ MP_Address_03 ] );
-	devMProc->mp_gate[ MP_Address_04 ] = gate_new( "A04", 		GATEMODE_OUTPUT, 34, devMProc->mp_wire[ MP_Address_04 ] );
-	devMProc->mp_gate[ MP_Address_05 ] = gate_new( "A05", 		GATEMODE_OUTPUT, 35, devMProc->mp_wire[ MP_Address_05 ] );
-	devMProc->mp_gate[ MP_Address_06 ] = gate_new( "A06", 		GATEMODE_OUTPUT, 36, devMProc->mp_wire[ MP_Address_06 ] );
-	devMProc->mp_gate[ MP_Address_07 ] = gate_new( "A07", 		GATEMODE_OUTPUT, 37, devMProc->mp_wire[ MP_Address_07 ] );
-	devMProc->mp_gate[ MP_Address_08 ] = gate_new( "A08", 		GATEMODE_OUTPUT, 38, devMProc->mp_wire[ MP_Address_08 ] );
-	devMProc->mp_gate[ MP_Address_09 ] = gate_new( "A09", 		GATEMODE_OUTPUT, 39, devMProc->mp_wire[ MP_Address_09 ] );
-	devMProc->mp_gate[ MP_Address_10 ] = gate_new( "A10", 		GATEMODE_OUTPUT, 40, devMProc->mp_wire[ MP_Address_10 ] );
-	devMProc->mp_gate[ MP_Address_11 ] = gate_new( "A11", 		GATEMODE_OUTPUT,  1, devMProc->mp_wire[ MP_Address_11 ] );
-	devMProc->mp_gate[ MP_Address_12 ] = gate_new( "A12", 		GATEMODE_OUTPUT,  2, devMProc->mp_wire[ MP_Address_12 ] );
-	devMProc->mp_gate[ MP_Address_13 ] = gate_new( "A13", 		GATEMODE_OUTPUT,  3, devMProc->mp_wire[ MP_Address_13 ] );
-	devMProc->mp_gate[ MP_Address_14 ] = gate_new( "A14", 		GATEMODE_OUTPUT,  4, devMProc->mp_wire[ MP_Address_14 ] );
-	devMProc->mp_gate[ MP_Address_15 ] = gate_new( "A15", 		GATEMODE_OUTPUT,  5, devMProc->mp_wire[ MP_Address_15 ] );
-	devMProc->mp_gate[ MP_Data_00    ] = gate_new( "D0", 		GATEMODE_INPUT,	 14, devMProc->mp_wire[ MP_Data_00    ] );
-	devMProc->mp_gate[ MP_Data_01    ] = gate_new( "D1", 		GATEMODE_INPUT,	 15, devMProc->mp_wire[ MP_Data_01    ] );
-	devMProc->mp_gate[ MP_Data_02    ] = gate_new( "D2", 		GATEMODE_INPUT,	 12, devMProc->mp_wire[ MP_Data_02    ] );
-	devMProc->mp_gate[ MP_Data_03    ] = gate_new( "D3", 		GATEMODE_INPUT,	  8, devMProc->mp_wire[ MP_Data_03    ] );
-	devMProc->mp_gate[ MP_Data_04    ] = gate_new( "D4", 		GATEMODE_INPUT,	  7, devMProc->mp_wire[ MP_Data_04    ] );
-	devMProc->mp_gate[ MP_Data_05    ] = gate_new( "D5", 		GATEMODE_INPUT,	  9, devMProc->mp_wire[ MP_Data_05    ] );
-	devMProc->mp_gate[ MP_Data_06    ] = gate_new( "D6", 		GATEMODE_INPUT,	 10, devMProc->mp_wire[ MP_Data_06    ] );
-	devMProc->mp_gate[ MP_Data_07    ] = gate_new( "D7", 		GATEMODE_INPUT,	 13, devMProc->mp_wire[ MP_Data_07    ] );
+	devMProc->mp_gate[ MP__CLOCK     ] = gate_new( "_CLOCK", 	devMProc->dev, 	GATEMODE_INPUT,	  6, NULL                               );	// Wires esterni
+	devMProc->mp_gate[ MP_VCC        ] = gate_new( "VCC", 		devMProc->dev, 	GATEMODE_INPUT,	 11, NULL                               );	// Wires esterni
+	devMProc->mp_gate[ MP_GND        ] = gate_new( "GND", 		devMProc->dev, 	GATEMODE_INPUT,  29, NULL                               );	// Wires esterni
+	devMProc->mp_gate[ MP__M1        ] = gate_new( "_M1", 		devMProc->dev, 	GATEMODE_OUTPUT, 17, devMProc->mp_wire[ MP__M1        ] );
+	devMProc->mp_gate[ MP__MREQ      ] = gate_new( "_MREQ", 	devMProc->dev, 	GATEMODE_OUTPUT, 19, devMProc->mp_wire[ MP__MREQ      ] );
+	devMProc->mp_gate[ MP__IORQ      ] = gate_new( "_IORQ", 	devMProc->dev, 	GATEMODE_OUTPUT, 20, devMProc->mp_wire[ MP__IORQ      ] );
+	devMProc->mp_gate[ MP__RD        ] = gate_new( "_RD", 		devMProc->dev, 	GATEMODE_OUTPUT, 21, devMProc->mp_wire[ MP__RD        ] );
+	devMProc->mp_gate[ MP__WR        ] = gate_new( "_WR", 		devMProc->dev, 	GATEMODE_OUTPUT, 22, devMProc->mp_wire[ MP__WR        ] );
+	devMProc->mp_gate[ MP__RFSH      ] = gate_new( "_RFSH", 	devMProc->dev, 	GATEMODE_OUTPUT, 28, devMProc->mp_wire[ MP__RFSH      ] );
+	devMProc->mp_gate[ MP__HALT      ] = gate_new( "_HALT", 	devMProc->dev, 	GATEMODE_OUTPUT, 18, devMProc->mp_wire[ MP__HALT      ] );
+	devMProc->mp_gate[ MP__WAIT      ] = gate_new( "_WAIT", 	devMProc->dev, 	GATEMODE_INPUT,  24, devMProc->mp_wire[ MP__WAIT      ] );
+	devMProc->mp_gate[ MP__INT       ] = gate_new( "_INT", 		devMProc->dev, 	GATEMODE_INPUT,  16, devMProc->mp_wire[ MP__INT       ] );
+	devMProc->mp_gate[ MP__NMI       ] = gate_new( "_NMI", 		devMProc->dev, 	GATEMODE_INPUT,  17, devMProc->mp_wire[ MP__NMI       ] );
+	devMProc->mp_gate[ MP__RESET     ] = gate_new( "_RESET", 	devMProc->dev, 	GATEMODE_INPUT,  26, NULL                               );	// Wires esterni
+	devMProc->mp_gate[ MP__BUSRQ     ] = gate_new( "_BUSRQ", 	devMProc->dev, 	GATEMODE_INPUT,  25, devMProc->mp_wire[ MP__BUSRQ     ] );
+	devMProc->mp_gate[ MP__BUSACK    ] = gate_new( "_BUSACK", 	devMProc->dev, 	GATEMODE_OUTPUT, 23, devMProc->mp_wire[ MP__BUSACK    ] );
+	devMProc->mp_gate[ MP_Address_00 ] = gate_new( "A00", 		devMProc->dev, 	GATEMODE_OUTPUT, 30, devMProc->mp_wire[ MP_Address_00 ] );
+	devMProc->mp_gate[ MP_Address_01 ] = gate_new( "A01", 		devMProc->dev, 	GATEMODE_OUTPUT, 31, devMProc->mp_wire[ MP_Address_01 ] );
+	devMProc->mp_gate[ MP_Address_02 ] = gate_new( "A02", 		devMProc->dev, 	GATEMODE_OUTPUT, 32, devMProc->mp_wire[ MP_Address_02 ] );
+	devMProc->mp_gate[ MP_Address_03 ] = gate_new( "A03", 		devMProc->dev, 	GATEMODE_OUTPUT, 33, devMProc->mp_wire[ MP_Address_03 ] );
+	devMProc->mp_gate[ MP_Address_04 ] = gate_new( "A04", 		devMProc->dev, 	GATEMODE_OUTPUT, 34, devMProc->mp_wire[ MP_Address_04 ] );
+	devMProc->mp_gate[ MP_Address_05 ] = gate_new( "A05", 		devMProc->dev, 	GATEMODE_OUTPUT, 35, devMProc->mp_wire[ MP_Address_05 ] );
+	devMProc->mp_gate[ MP_Address_06 ] = gate_new( "A06", 		devMProc->dev, 	GATEMODE_OUTPUT, 36, devMProc->mp_wire[ MP_Address_06 ] );
+	devMProc->mp_gate[ MP_Address_07 ] = gate_new( "A07", 		devMProc->dev, 	GATEMODE_OUTPUT, 37, devMProc->mp_wire[ MP_Address_07 ] );
+	devMProc->mp_gate[ MP_Address_08 ] = gate_new( "A08", 		devMProc->dev, 	GATEMODE_OUTPUT, 38, devMProc->mp_wire[ MP_Address_08 ] );
+	devMProc->mp_gate[ MP_Address_09 ] = gate_new( "A09", 		devMProc->dev, 	GATEMODE_OUTPUT, 39, devMProc->mp_wire[ MP_Address_09 ] );
+	devMProc->mp_gate[ MP_Address_10 ] = gate_new( "A10", 		devMProc->dev, 	GATEMODE_OUTPUT, 40, devMProc->mp_wire[ MP_Address_10 ] );
+	devMProc->mp_gate[ MP_Address_11 ] = gate_new( "A11", 		devMProc->dev, 	GATEMODE_OUTPUT,  1, devMProc->mp_wire[ MP_Address_11 ] );
+	devMProc->mp_gate[ MP_Address_12 ] = gate_new( "A12", 		devMProc->dev, 	GATEMODE_OUTPUT,  2, devMProc->mp_wire[ MP_Address_12 ] );
+	devMProc->mp_gate[ MP_Address_13 ] = gate_new( "A13", 		devMProc->dev, 	GATEMODE_OUTPUT,  3, devMProc->mp_wire[ MP_Address_13 ] );
+	devMProc->mp_gate[ MP_Address_14 ] = gate_new( "A14", 		devMProc->dev, 	GATEMODE_OUTPUT,  4, devMProc->mp_wire[ MP_Address_14 ] );
+	devMProc->mp_gate[ MP_Address_15 ] = gate_new( "A15", 		devMProc->dev, 	GATEMODE_OUTPUT,  5, devMProc->mp_wire[ MP_Address_15 ] );
+	devMProc->mp_gate[ MP_Data_00    ] = gate_new( "D0", 		devMProc->dev, 	GATEMODE_INPUT,	 14, devMProc->mp_wire[ MP_Data_00    ] );
+	devMProc->mp_gate[ MP_Data_01    ] = gate_new( "D1", 		devMProc->dev, 	GATEMODE_INPUT,	 15, devMProc->mp_wire[ MP_Data_01    ] );
+	devMProc->mp_gate[ MP_Data_02    ] = gate_new( "D2", 		devMProc->dev, 	GATEMODE_INPUT,	 12, devMProc->mp_wire[ MP_Data_02    ] );
+	devMProc->mp_gate[ MP_Data_03    ] = gate_new( "D3", 		devMProc->dev, 	GATEMODE_INPUT,	  8, devMProc->mp_wire[ MP_Data_03    ] );
+	devMProc->mp_gate[ MP_Data_04    ] = gate_new( "D4", 		devMProc->dev, 	GATEMODE_INPUT,	  7, devMProc->mp_wire[ MP_Data_04    ] );
+	devMProc->mp_gate[ MP_Data_05    ] = gate_new( "D5", 		devMProc->dev, 	GATEMODE_INPUT,	  9, devMProc->mp_wire[ MP_Data_05    ] );
+	devMProc->mp_gate[ MP_Data_06    ] = gate_new( "D6", 		devMProc->dev, 	GATEMODE_INPUT,	 10, devMProc->mp_wire[ MP_Data_06    ] );
+	devMProc->mp_gate[ MP_Data_07    ] = gate_new( "D7", 		devMProc->dev, 	GATEMODE_INPUT,	 13, devMProc->mp_wire[ MP_Data_07    ] );
 
 	//	Compila la gatelist con l'array di gates
 	for ( i=0; i<MP_NUM_PIN; i++) {
-		if ( devMProc->pGates == NULL ) {								// devMProc->pGates
-			glist_node_accoda( &devMProc->pGates, devMProc->mp_gate[i] );
+		if ( devMProc->dev->pGates == NULL ) {								// devMProc->dev->pGates
+			glist_node_accoda( &devMProc->dev->pGates, devMProc->mp_gate[i] );
 		} else {
-			pGlist = devMProc->pGates;
+			pGlist = devMProc->dev->pGates;
 			while ( pGlist->g_next != NULL ) {							// Cerco l'ultimo nodo della lista
 				pGlist = pGlist->g_next;
 			}

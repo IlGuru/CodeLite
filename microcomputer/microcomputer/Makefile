@@ -30,10 +30,10 @@ dev_reset.o : dev_reset.h dev_reset.c board.h board.c
 dev_clock.o : dev_clock.h dev_clock.c board.h board.c
 	$(CC) -c dev_clock.h dev_clock.c $(CFLAGS)
 
-dev_mproc.o : dev_mproc.h dev_mproc.c board.h board.c
+dev_mproc.o : dev_mproc.h dev_mproc.c board.h board.c op_codes.h
 	$(CC) -c dev_mproc.h dev_mproc.c $(CFLAGS)
 
-dev_memory.o : dev_memory.h dev_memory.c board.h board.c
+dev_memory.o : dev_memory.h dev_memory.c board.h board.c op_codes.h
 	$(CC) -c dev_memory.h dev_memory.c $(CFLAGS)
 
 .PHONY: clean

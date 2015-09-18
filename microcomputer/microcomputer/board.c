@@ -470,13 +470,14 @@ void *glist_node_accoda( p_glist *gList, p_gate pGate ) {
 	return NULL;
 }
 
-p_gate gate_new( char* nome, t_gatemode gatemode, char pin, p_wire pWire ) {				//	Crea un nuovo wire e ne scrive il valore attuale
+p_gate gate_new( char* nome, p_device ParentDevice, t_gatemode gatemode, char pin, p_wire pWire ) {				//	Crea un nuovo wire e ne scrive il valore attuale
 	p_gate 	pGate;
 	p_glist pGlist;
 
 	pGate = malloc( sizeof(t_gate) );
 
 	pGate->nome 		= nome;
+	pGate->Device		= ParentDevice;
 	pGate->pin 			= pin;
 	if ( pWire != NULL ) {
 		gate_connect( pGate, pWire );

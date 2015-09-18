@@ -5,9 +5,14 @@
 #include "board.h"
 
 struct s_Reset {
+	//	DEVICE
+	p_device	dev;
+
 	char	counter;
+
 	p_wire 	w_reset;
 	p_gate 	g_reset;
+
 	FN_VOID_VOID	task;
 };
 

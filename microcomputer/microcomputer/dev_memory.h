@@ -5,7 +5,7 @@
 #include "board.h"
 #include "op_codes.h"
 
-#define	MEM_NUM_PIN		28
+#define	MEM_NUM_PIN		30
 
 #define	MEM_VCC          0
 #define	MEM_GND          1
@@ -35,14 +35,18 @@
 #define	MEM_Data_05     25
 #define	MEM_Data_06     26
 #define	MEM_Data_07     27
+#define	MEM__RD         28
+#define	MEM__WR         29
 
 #define MEM_SIZE        8192
 
 struct s_Memory {
+	//	DEVICE
+	p_device	dev;
+	
 	//	GATES
 	p_gate	mem_gate[MEM_NUM_PIN];
 	p_wire	mem_wire[MEM_NUM_PIN];
-	p_glist	pGates;
 
 	dt_8bit	memory[ MEM_SIZE ];
 
